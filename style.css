@@ -1,473 +1,779 @@
-/* ========= RESET ========= */
-*{box-sizing:border-box;margin:0;padding:0}
-body{
-  font-family:"Segoe UI",system-ui,Arial,sans-serif;
-  padding:20px;
-  transition:background .35s,color .35s;
-  -webkit-text-size-adjust:100%;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="theme-color" content="#000000" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a6bff" />
+  <meta charset="UTF-8" />
+  <title>Money Budgeter</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="calculator-box">
+    <div id="settings-icon" onclick="openSettings()">⚙️</div>
+    <h1 id="title">Money Budgeter</h1>
+    <div id="clock">🕒 --:--</div>
+    <div id="budget">Budget: $0.00</div>
+
+    <input id="input-display" placeholder="0.00" readonly />
+
+    <div class="numpad">
+      <button onclick="appendNumber('1')">1</button>
+      <button onclick="appendNumber('2')">2</button>
+      <button onclick="appendNumber('3')">3</button>
+      <button onclick="appendNumber('4')">4</button>
+      <button onclick="appendNumber('5')">5</button>
+      <button onclick="appendNumber('6')">6</button>
+      <button onclick="appendNumber('7')">7</button>
+      <button onclick="appendNumber('8')">8</button>
+      <button onclick="appendNumber('9')">9</button>
+      <button onclick="appendNumber('0')">0</button>
+
+      <!-- Decimal button becomes visible ONLY when Smart cents input is OFF -->
+      <button id="decimalBtn" onclick="appendDecimal()">.</button>
+
+      <button onclick="backspace()">⌫</button>
+    </div>
+
+    <div class="buttons">
+      <button id="addBtn" onclick="submitAmount('add')">Add</button>
+      <button id="subtractBtn" onclick="openSubtract()">Subtract</button>
+      <button id="clearBtn" onclick="clearHistory()">Clear History</button>
+      <button id="resetBtn" onclick="resetBudget()">Reset</button>
+      <button id="repeatBtn" onclick="location.href='repeat.html'">Repeat ➕</button>
+      <button id="viewCatBtn" onclick="viewCategoryTotals()">📊 View Categories</button>
+    </div>
+
+    <div class="history-header">
+      <div id="historyLabel">History</div>
+      <button id="toggleHistoryBtn" class="history-toggle">Expand ⇵</button>
+    </div>
+    <div id="history"></div>
+  </div>
+
+  <!-- Theme toggle -->
+  <div id="mode-toggle" onclick="toggleMode()">🌙</div>
+
+  <!-- Overlay + Settings modal -->
+  <div id="overlay"></div>
+
+  <div id="settingsModal" class="modal" aria-modal="true" role="dialog">
+    <h3 id="settingsTitle">Settings</h3>
+    <hr />
+
+    <h4 id="languageLabel">Language:</h4>
+    <button class="btn" onclick="toggleLanguage()">
+      <span id="langBtn">Switch to Arabic 🇸🇦</span>
+    </button>
+
+    <h4 id="currencyLabel">Currency:</h4>
+    <select id="currencySelect" class="mb-select">
+      <option value="USD">USD ($)</option>
+      <option value="QAR">QAR (ر.ق)</option>
+      <option value="EUR">EUR (€)</option>
+      <option value="GBP">GBP (£)</option>
+      <option value="SAR">SAR (ر.س)</option>
+      <option value="AED">AED (د.إ)</option>
+      <option value="JOD">JOD (د.ا)</option>
+      <option value="KWD">KWD (د.ك)</option>
+    </select>
+
+    <!-- ✅ PROFILES (NEW) -->
+    <h4 id="profilesLabel">Profiles:</h4>
+    <select id="profileSelect" class="mb-select"></select>
+
+    <div style="display:flex; gap:8px;">
+      <button class="btn" style="flex:1" onclick="addProfile()">➕ Add</button>
+      <button class="btn" style="flex:1" onclick="renameProfile()">✏️ Rename</button>
+    </div>
+    <button class="btn" style="background:#ef4444" onclick="deleteProfile()">🗑 Delete Profile</button>
+
+    <h4 id="featuresLabel">Features:</h4>
+
+    <!-- Input mode toggle -->
+    <label>
+      <span id="toggleCentsLbl">Smart cents input</span>
+      <input type="checkbox" id="toggleCentsMode" />
+    </label>
+
+    <label><span id="toggleRepeatLbl">Show Repeat</span><input type="checkbox" id="toggleRepeat" /></label>
+    <label><span id="toggleClearLbl">Show Clear History</span><input type="checkbox" id="toggleClear" /></label>
+    <label><span id="toggleResetLbl">Show Reset</span><input type="checkbox" id="toggleReset" /></label>
+
+    <h4 id="categoryLabel">Custom Categories:</h4>
+    <div id="categoryList"></div>
+    <input type="text" id="newCategoryInput" placeholder="Add new category" />
+    <button class="btn" onclick="addCategory()">Add Category</button>
+    <button class="btn" onclick="closeSettings()">Close</button>
+  </div>
+
+<script>
+/* ======= DOM ======= */
+const modeBtn = document.getElementById('mode-toggle');
+const overlay = document.getElementById('overlay');
+const settingsModal = document.getElementById('settingsModal');
+const historyEl = document.getElementById('history');
+const repeatBtn = document.getElementById('repeatBtn');
+const clearBtn  = document.getElementById('clearBtn');
+const resetBtn  = document.getElementById('resetBtn');
+const decimalBtn = document.getElementById('decimalBtn');
+const inputEl = document.getElementById('input-display');
+
+/* ========= PROFILES SYSTEM (NEW) ========= */
+const PROFILES_KEY = 'mb_profiles';
+const ACTIVE_PROFILE_KEY = 'mb_activeProfileId';
+
+function uid(){
+  return 'p_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+function loadProfiles(){
+  return JSON.parse(localStorage.getItem(PROFILES_KEY)) || [];
+}
+function saveProfiles(list){
+  localStorage.setItem(PROFILES_KEY, JSON.stringify(list));
+}
+function getActiveProfileId(){
+  return localStorage.getItem(ACTIVE_PROFILE_KEY);
+}
+function setActiveProfileId(id){
+  localStorage.setItem(ACTIVE_PROFILE_KEY, id);
+}
+function profileStoreKey(id){
+  return `mb_profile_${id}`;
+}
+function defaultProfileData(){
+  return {
+    budget: 0,
+    history: [],
+    categories: ['Leisure','Transportation','Food','Groceries','Others','Games','Friends'],
+    featureSettings: { repeat:true, clear:true, reset:true },
+    centsMode: true,
+    currency: 'USD',
+    lang: (localStorage.getItem('lang') || 'en') // keep your language preference
+  };
+}
+function readProfileData(id){
+  const raw = localStorage.getItem(profileStoreKey(id));
+  if (!raw) return defaultProfileData();
+  try{
+    const parsed = JSON.parse(raw);
+    return { ...defaultProfileData(), ...parsed };
+  }catch(e){
+    return defaultProfileData();
+  }
+}
+function writeProfileData(id, data){
+  localStorage.setItem(profileStoreKey(id), JSON.stringify(data));
 }
 
-/* ========= THEME ========= */
-:root{
-  --brand:#0a6bff;
+/* one-time migration from your old keys */
+function migrateOldDataIntoDefaultProfileIfNeeded(){
+  const profiles = loadProfiles();
+  if (profiles.length) return;
 
-  /* MORE FROSTED (less clear) */
-  --glass-light:rgba(255,255,255,.38);
-  --glass-dark:rgba(10,20,50,.60);
+  const id = uid();
+  saveProfiles([{ id, name:'Main' }]);
+  setActiveProfileId(id);
 
-  --glass-border-light:rgba(255,255,255,.55);
-  --glass-border-dark:rgba(210,225,255,.14);
+  const oldBudget = parseFloat(localStorage.getItem('budget')) || 0;
+  const oldHistory = JSON.parse(localStorage.getItem('history')) || [];
+  const oldCategories = JSON.parse(localStorage.getItem('categories')) ||
+    ['Leisure','Transportation','Food','Groceries','Others','Games','Friends'];
+  const oldFeatureSettings = JSON.parse(localStorage.getItem('featureSettings')) ||
+    { repeat:true, clear:true, reset:true };
+  const oldCentsMode = (localStorage.getItem('centsMode') ?? 'true') === 'true';
+  const oldCurrency = localStorage.getItem('currency') || 'USD';
+  const oldLang = localStorage.getItem('lang') || 'en';
 
-  --txt:#0b1220;
-  --txt-inv:#ffffff;
-}
-
-/* ========= LIGHT MODE ========= */
-body.light-mode{
-  background:linear-gradient(150deg,#f6f9ff 0%,#ecf2ff 60%,#e8f0ff 100%);
-  color:var(--txt);
-}
-
-/* ========= DARK MODE ========= */
-body.dark-mode{
-  background-color:#060e24;
-  background-image:
-    radial-gradient(1600px 1100px at 30% 20%, rgba(18,34,74,.55), transparent 70%),
-    radial-gradient(1400px 1000px at 80% 85%, rgba(8,19,46,.5), transparent 65%),
-    linear-gradient(165deg,#08122a 0%,#061026 52%,#050a18 100%);
-  background-attachment:fixed;
-  color:#ffffff;
+  writeProfileData(id, {
+    budget: oldBudget,
+    history: oldHistory,
+    categories: oldCategories,
+    featureSettings: oldFeatureSettings,
+    centsMode: oldCentsMode,
+    currency: oldCurrency,
+    lang: oldLang
+  });
 }
 
-/* ========= GLASS CARD ========= */
-.calculator-box{
-  width:360px;
-  margin:0 auto;
-  padding:22px;
-  border-radius:22px;
-  position:relative;
-  background:var(--glass-light);
-  border:1px solid var(--glass-border-light);
-  backdrop-filter:blur(28px) saturate(165%);
-  box-shadow:0 12px 32px rgba(0,0,0,.14);
-}
-body.dark-mode .calculator-box{
-  background:var(--glass-dark);
-  border:1px solid var(--glass-border-dark);
-  box-shadow:0 18px 48px rgba(0,0,0,.60);
+/* live app state (comes from active profile) */
+let categories = [];
+let featureSettings = { repeat:true, clear:true, reset:true };
+let lang = 'en';
+let budget = 0;
+let history = [];
+let centsMode = true;
+
+function persistCurrentProfile(){
+  const id = getActiveProfileId();
+  if (!id) return;
+
+  const data = {
+    budget,
+    history,
+    categories,
+    featureSettings,
+    centsMode,
+    currency: getCurrency(),
+    lang
+  };
+  writeProfileData(id, data);
 }
 
-h1{
-  text-align:center;
-  margin-bottom:14px;
-  color:#7fb4ff;
-  font-weight:800;
-  letter-spacing:.2px;
-}
-body.light-mode h1{color:#0a6bff}
+function loadActiveProfileIntoApp(){
+  const id = getActiveProfileId();
+  if (!id) return;
 
-#clock,#budget{
-  text-align:center;
-  margin:6px 0;
-  font-weight:600;
-}
-#budget{
-  font-size:3rem;
-  font-weight:800;
-}
+  const data = readProfileData(id);
 
-/* ========= INPUT ========= */
-#input-display{
-  width:100%;
-  text-align:right;
-  font-size:26px;
-  padding:10px 12px;
-  border:none;
-  background:transparent;
-  color:inherit;
+  budget = Number(data.budget || 0);
+  history = Array.isArray(data.history) ? data.history : [];
+  categories = Array.isArray(data.categories) ? data.categories : defaultProfileData().categories;
+  featureSettings = data.featureSettings || { repeat:true, clear:true, reset:true };
+  centsMode = !!data.centsMode;
+
+  // currency is per profile
+  localStorage.setItem('currency', data.currency || 'USD');
+
+  // language per profile (optional)
+  lang = data.lang || (localStorage.getItem('lang') || 'en');
+  localStorage.setItem('lang', lang);
 }
 
-/* ========= NUMPAD ========= */
-.numpad{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  justify-content:center;
-  margin:12px 0;
-}
-.numpad button{
-  flex:1 1 28%;
-  padding:12px;
-  border:none;
-  border-radius:14px;
-  background:rgba(13,27,56,.92);
-  color:#fff;
-  font-size:1.1rem;
-  font-weight:800;
-  cursor:pointer;
-  box-shadow:0 8px 22px rgba(10,20,40,.35);
-  transition:transform .12s ease, background .2s ease, box-shadow .2s ease;
-}
-.numpad button:hover{
-  transform:translateY(-1px);
-  background:rgba(18,36,78,1);
-  box-shadow:0 12px 26px rgba(10,20,40,.50);
-}
-.numpad button:disabled{
-  opacity:.35;
-  cursor:not-allowed;
+function refreshProfileSelect(){
+  const sel = document.getElementById('profileSelect');
+  if (!sel) return;
+
+  const profiles = loadProfiles();
+  const active = getActiveProfileId();
+
+  sel.innerHTML = '';
+  profiles.forEach(p=>{
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    if (p.id === active) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  sel.onchange = ()=> switchProfile(sel.value);
 }
 
-/* ========= MAIN BUTTONS ========= */
-.buttons{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  justify-content:center;
-  margin:14px 0;
-}
-.buttons button{
-  flex:1 1 45%;
-  padding:12px;
-  border:none;
-  border-radius:14px;
-  font-weight:900;
-  background:rgba(13,27,56,.96);
-  color:#fff;
-  cursor:pointer;
-  box-shadow:0 10px 26px rgba(10,20,40,.40);
-  transition:transform .12s ease, background .2s ease, box-shadow .2s ease;
-}
-.buttons button:hover{
-  transform:translateY(-1px);
-  background:rgba(18,36,78,1);
-  box-shadow:0 14px 32px rgba(10,20,40,.55);
+function switchProfile(id){
+  const profiles = loadProfiles();
+  if (!profiles.some(p=>p.id === id)) return;
+
+  persistCurrentProfile();
+  setActiveProfileId(id);
+
+  loadActiveProfileIntoApp();
+
+  clearInput();
+  updateBudget();
+  renderHistory();
+  applyFeatureVisibility();
+  syncDecimalButton();
+  renderAmountInput();
+  applyLanguage();
+  refreshProfileSelect();
 }
 
-/* ========= HISTORY ========= */
-.history-header{
-  display:flex;
-  justify-content:space-between;
-  margin:8px 0 10px;
-  font-weight:900;
-}
-.history-toggle{
-  padding:6px 10px;
-  border-radius:10px;
-  font-size:12px;
-  border:1px solid var(--glass-border-light);
-  background:rgba(90,160,255,.20);
-  color:#0a3a8b;
-  cursor:pointer;
-  backdrop-filter:blur(18px);
-}
-body.dark-mode .history-toggle{
-  background:rgba(22,36,76,.55);
-  color:#d7e6ff;
-  border-color:var(--glass-border-dark);
+function addProfile(){
+  const name = prompt(lang==='ar' ? 'اسم البروفايل؟' : 'Profile name? (ex: Shopping)');
+  if (!name) return;
+
+  persistCurrentProfile();
+
+  const profiles = loadProfiles();
+  const id = uid();
+  profiles.push({ id, name: name.trim() });
+  saveProfiles(profiles);
+
+  writeProfileData(id, defaultProfileData());
+
+  switchProfile(id);
 }
 
-#history{
-  max-height:220px;
-  overflow:auto;
-  border-radius:14px;
-  padding:10px;
-  background:var(--glass-light);
-  border:1px solid var(--glass-border-light);
-  backdrop-filter:blur(22px) saturate(160%);
-}
-body.dark-mode #history{
-  background:var(--glass-dark);
-  border-color:var(--glass-border-dark);
+function renameProfile(){
+  const active = getActiveProfileId();
+  if (!active) return;
+
+  const profiles = loadProfiles();
+  const p = profiles.find(x=>x.id === active);
+  if (!p) return;
+
+  const newName = prompt(lang==='ar' ? 'الاسم الجديد:' : 'New profile name:', p.name);
+  if (!newName) return;
+
+  p.name = newName.trim();
+  saveProfiles(profiles);
+  refreshProfileSelect();
 }
 
-#history::-webkit-scrollbar{width:6px}
-#history::-webkit-scrollbar-thumb{background:#5aa3ff;border-radius:8px}
+function deleteProfile(){
+  const active = getActiveProfileId();
+  const profiles = loadProfiles();
 
-/* ========= ICONS ========= */
-#settings-icon{
-  position:absolute;
-  top:12px;
-  right:14px;
-  font-size:24px;
-  cursor:pointer;
-  transition:transform .2s ease, filter .2s ease;
-}
-#settings-icon:hover{
-  transform:rotate(20deg);
-  filter:drop-shadow(0 0 10px rgba(90,160,255,.55));
-}
-#mode-toggle{
-  position:fixed;
-  right:16px;
-  bottom:16px;
-  font-size:30px;
-  cursor:pointer;
-  transition:transform .2s ease;
-}
-#mode-toggle:hover{transform:rotate(18deg) scale(1.05)}
+  if (profiles.length <= 1){
+    alert(lang==='ar' ? 'لا يمكن حذف آخر بروفايل.' : "You can't delete the last profile.");
+    return;
+  }
 
-/* ========= OVERLAY ========= */
-#overlay{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.45);
-  display:none;
-  z-index:9998;
-  backdrop-filter:blur(10px);
-}
+  const p = profiles.find(x=>x.id === active);
+  const ok = confirm(
+    (lang==='ar'
+      ? `حذف البروفايل "${p?.name || ''}"؟`
+      : `Delete profile "${p?.name || ''}"?`) +
+    (lang==='ar' ? '\nسيتم حذف الميزانية والسجل.' : '\nThis removes its budget and history.')
+  );
+  if (!ok) return;
 
-/* ========= MODALS ========= */
-.modal{
-  position:fixed;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  width:min(440px,94vw);
-  max-height:80vh;
-  overflow:auto;
-  border-radius:16px;
-  padding:18px;
-  background:var(--glass-light);
-  border:1px solid var(--glass-border-light);
-  backdrop-filter:blur(28px) saturate(170%);
-  box-shadow:0 22px 60px rgba(0,0,0,.35);
-  display:none;
-  z-index:9999;
-}
-body.dark-mode .modal{
-  background:var(--glass-dark);
-  border:1px solid var(--glass-border-dark);
-  color:#fff;
-  box-shadow:0 26px 70px rgba(0,0,0,.62);
+  persistCurrentProfile();
+
+  localStorage.removeItem(profileStoreKey(active));
+
+  const next = profiles.filter(x=>x.id !== active);
+  saveProfiles(next);
+
+  setActiveProfileId(next[0].id);
+  loadActiveProfileIntoApp();
+
+  clearInput();
+  updateBudget();
+  renderHistory();
+  applyFeatureVisibility();
+  syncDecimalButton();
+  renderAmountInput();
+  applyLanguage();
+  refreshProfileSelect();
 }
 
-.modal h3{
-  text-align:center;
-  margin-bottom:10px;
-  font-weight:900;
+/* ======= Currency helpers ======= */
+function getCurrency(){
+  return localStorage.getItem('currency') || 'USD';
+}
+function formatMoney(value){
+  const currency = getCurrency();
+  try{
+    return new Intl.NumberFormat(undefined, { style:'currency', currency }).format(value);
+  } catch(e){
+    return `$${Number(value || 0).toFixed(2)}`;
+  }
 }
 
-/* THEMED BUTTONS inside modals/settings */
-.modal .btn,
-#settingsModal .btn{
-  display:block;
-  width:100%;
-  margin:10px 0;
-  padding:12px;
-  border:none;
-  border-radius:14px;
-  background:rgba(13,27,56,.96);
-  color:#fff;
-  font-weight:900;
-  cursor:pointer;
-  box-shadow:0 10px 26px rgba(10,20,40,.40);
-  transition:transform .12s ease, background .2s ease, box-shadow .2s ease;
+/* ======= Clock ======= */
+function tickClock(){
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    '🕒 ' + n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
-.modal .btn:hover,
-#settingsModal .btn:hover{
-  transform:translateY(-1px);
-  background:rgba(18,36,78,1);
-  box-shadow:0 14px 32px rgba(10,20,40,.55);
+setInterval(tickClock,1000); tickClock();
+
+/* ======= Input state ======= */
+let amountDigits = '';
+let amountRaw = '';
+
+function moneyFromDigits(d){
+  if (!d) return 0;
+  const cents = parseInt(d, 10);
+  if (isNaN(cents)) return 0;
+  return cents / 100;
+}
+function moneyFromRaw(s){
+  if (!s) return 0;
+  const v = parseFloat(s);
+  if (isNaN(v)) return 0;
+  return v;
+}
+function renderAmountInput(){
+  const v = centsMode ? moneyFromDigits(amountDigits) : moneyFromRaw(amountRaw);
+  inputEl.value = formatMoney(v);
+}
+function syncDecimalButton(){
+  decimalBtn.style.display = centsMode ? 'none' : '';
+}
+function clearInput(){
+  amountDigits = '';
+  amountRaw = '';
+  renderAmountInput();
+}
+function appendNumber(n){
+  if (!/^\d$/.test(n)) return;
+
+  if (centsMode){
+    if (amountDigits.length >= 12) return;
+    if (amountDigits === '0') amountDigits = '';
+    amountDigits += n;
+  } else {
+    if (amountRaw.length >= 14) return;
+    if (amountRaw.includes('.')){
+      const parts = amountRaw.split('.');
+      const dec = parts[1] ?? '';
+      if (dec.length >= 2) return;
+    }
+    amountRaw += n;
+  }
+  renderAmountInput();
+}
+function appendDecimal(){
+  if (centsMode) return;
+  if (!amountRaw) amountRaw = '0';
+  if (amountRaw.includes('.')) return;
+  amountRaw += '.';
+  renderAmountInput();
+}
+function backspace(){
+  if (centsMode) amountDigits = amountDigits.slice(0, -1);
+  else amountRaw = amountRaw.slice(0, -1);
+  renderAmountInput();
 }
 
-/* round close button */
-.close-btn{
-  width:34px;height:34px;
-  border-radius:50%;
-  border:none;
-  background:var(--brand);
-  color:#fff;
-  font-weight:900;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition:transform .12s ease, box-shadow .2s ease;
-}
-.close-btn:hover{
-  transform:scale(1.07);
-  box-shadow:0 0 12px rgba(42,139,255,.55);
+/* ======= Add/Subtract ======= */
+function getCurrentAmount(){
+  return centsMode ? moneyFromDigits(amountDigits) : moneyFromRaw(amountRaw);
 }
 
-/* ========= IMPORTANT FIX =========
-   Subtract & Category Totals popups use: class="modal sleek-modal"
-   We want those CENTERED like normal modals, not fullscreen.
-*/
-.modal.sleek-modal{
-  width:min(440px,94vw);
-  height:auto;
-  display:none; /* JS toggles display */
-  inset:auto;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  justify-content:unset;
-  align-items:unset;
-  background:var(--glass-light);
-  border:1px solid var(--glass-border-light);
-}
-body.dark-mode .modal.sleek-modal{
-  background:var(--glass-dark);
-  border:1px solid var(--glass-border-dark);
+function submitAmount(type){
+  const v = getCurrentAmount();
+  if (!v) return;
+
+  const ts = new Date().toLocaleString();
+
+  if (type==='add'){
+    budget += v;
+    history.push({type:'Add', value:v, timestamp:ts});
+  }
+
+  saveBudget();
+  renderHistory();
+  clearInput();
 }
 
-/* ========= FULLSCREEN HISTORY (only for the history overlay wrapper) ========= */
-.sleek-modal{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100vw;
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:10000;
-  background:transparent;
-}
-.sleek-modal > div{
-  width:94vw;
-  max-width:800px;
-  max-height:90vh;
-  overflow:auto;
-  border-radius:16px;
-  padding:16px;
-  background:var(--glass-light);
-  border:1px solid var(--glass-border-light);
-  backdrop-filter:blur(28px) saturate(165%);
-  box-shadow:0 24px 64px rgba(0,0,0,.40);
-}
-body.dark-mode .sleek-modal > div{
-  background:var(--glass-dark);
-  border:1px solid var(--glass-border-dark);
-  box-shadow:0 30px 78px rgba(0,0,0,.70);
+/* ======= Overlay helpers ======= */
+function openOverlay(){ overlay.style.display='block'; }
+function closeOverlay(){ overlay.style.display='none'; }
+overlay.addEventListener('click', ()=>{
+  closeSettings();
+  closeTempModals();
+});
+function showModal(el){ el.style.display='block'; openOverlay(); }
+function closeTempModals(){
+  document.querySelectorAll('.sleek-modal').forEach(el=>el.remove());
+  closeOverlay();
 }
 
-/* ========= SETTINGS ========= */
-#settingsModal hr{
-  border:none;
-  height:1px;
-  background:rgba(255,255,255,.35);
-  margin:10px 0 12px;
-}
-body.dark-mode #settingsModal hr{background:rgba(255,255,255,.12)}
-
-/* feature toggles */
-#settingsModal label{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin:10px 0;
-  padding:12px;
-  border-radius:14px;
-  background:rgba(240,245,255,.32);
-  border:1px solid rgba(255,255,255,.45);
-  backdrop-filter:blur(18px);
-  font-weight:800;
-}
-body.dark-mode #settingsModal label{
-  background:rgba(18,30,64,.52);
-  border:1px solid rgba(210,225,255,.14);
+/* ======= Subtract ======= */
+function openSubtract(){
+  const m = document.createElement('div');
+  m.className = 'modal sleek-modal';
+  m.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+      <h3>${lang==='ar'?'اختر الفئة':'Select Category'}</h3>
+      <button class="close-btn" onclick="closeTempModals()">✖</button>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;width:100%;margin-top:8px;">
+      ${categories.map(c =>
+        `<button class="btn" style="width:90%;margin:6px 0;" onclick="doSubtract('${c.replace(/'/g,"&#39;")}')">${c}</button>`
+      ).join('')}
+    </div>`;
+  document.body.appendChild(m);
+  showModal(m);
 }
 
-/* toggle switches */
-#settingsModal label input[type="checkbox"]{
-  appearance:none;
-  width:48px;height:28px;
-  border-radius:999px;
-  cursor:pointer;
-  background:rgba(140,160,195,.55);
-  position:relative;
-  transition:background .2s;
-}
-#settingsModal label input[type="checkbox"]::after{
-  content:'';
-  position:absolute;
-  top:3px; left:3px;
-  width:22px;height:22px;
-  border-radius:50%;
-  background:#fff;
-  box-shadow:0 2px 6px rgba(0,0,0,.25);
-  transition:left .2s;
-}
-#settingsModal label input[type="checkbox"]:checked{
-  background:linear-gradient(180deg,#0a6bff,#094bd4);
-}
-#settingsModal label input[type="checkbox"]:checked::after{left:23px}
+function doSubtract(cat){
+  const v = getCurrentAmount();
+  if (!v) { closeTempModals(); return; }
 
-/* ========= CATEGORIES LIST (MORE SPACED OUT) ========= */
-#categoryList{
-  margin-top:10px;
-}
-#categoryList > div{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:14px 16px;
-  margin:14px 0;             /* MORE SPACE */
-  border-radius:14px;
-  background:rgba(245,248,255,.50);
-  border:1px dashed rgba(160,180,220,.55);
-  backdrop-filter:blur(16px);
-}
-body.dark-mode #categoryList > div{
-  background:rgba(16,28,58,.58);
-  border-color:rgba(210,225,255,.16);
-}
-#categoryList > div button{
-  min-width:32px;
-  min-height:32px;
-  border-radius:10px;
-  border:none;
-  background:#ef4444!important;
-  color:#fff;
-  font-weight:900;
-  box-shadow:0 4px 10px rgba(239,68,68,.35);
-  cursor:pointer;
+  const ts = new Date().toLocaleString();
+  budget -= v;
+  history.push({type:`Subtract (${cat})`, value:v, timestamp:ts});
+
+  saveBudget();
+  renderHistory();
+  clearInput();
+  closeTempModals();
 }
 
-/* add-category input */
-#newCategoryInput{
-  width:100%;
-  padding:12px 12px;
-  margin-top:10px;
-  border-radius:12px;
-  border:1px solid rgba(200,210,230,.8);
-  background:rgba(255,255,255,.65);
-  color:inherit;
-  backdrop-filter:blur(16px);
+/* ======= History ======= */
+function renderHistory(){
+  historyEl.innerHTML = '';
+  history.slice().reverse().forEach(it=>{
+    const d=document.createElement('div');
+    d.textContent = `${it.timestamp} — ${it.type}: ${formatMoney(it.value)}`;
+    historyEl.appendChild(d);
+  });
 }
-body.dark-mode #newCategoryInput{
-  border-color:rgba(210,225,255,.18);
-  background:rgba(16,28,58,.55);
-  color:#fff;
+function clearHistory(){
+  history = [];
+  saveBudget();
+  renderHistory();
 }
-
-/* ========= Currency select ========= */
-.mb-select{
-  width:100%;
-  padding:12px 12px;
-  margin:10px 0 14px;
-  border-radius:12px;
-  border:1px solid rgba(200,210,230,.8);
-  background:rgba(255,255,255,.65);
-  font-weight:900;
-  color:inherit;
-  backdrop-filter:blur(16px);
+function resetBudget(){
+  budget = 0;
+  saveBudget();
 }
-body.dark-mode .mb-select{
-  background:rgba(16,28,58,.55);
-  border-color:rgba(210,225,255,.18);
-  color:#fff;
+function saveBudget(){
+  updateBudget();
+  persistCurrentProfile(); // ✅ SAVE INTO CURRENT PROFILE
+}
+function updateBudget(){
+  document.getElementById('budget').textContent = `Budget: ${formatMoney(budget)}`;
 }
 
-/* ========= INPUT ZOOM FIX ========= */
-input,select,textarea{font-size:16px}
+/* ======= Theme ======= */
+function toggleMode(){
+  const dark = document.body.classList.contains('dark-mode');
+  document.body.classList.toggle('dark-mode', !dark);
+  document.body.classList.toggle('light-mode', dark);
+  localStorage.setItem('theme', dark ? 'light' : 'dark');
+  modeBtn.textContent = dark ? '🌙' : '☀️';
+}
+(function initTheme(){
+  if (localStorage.getItem('theme')==='dark'){
+    document.body.classList.add('dark-mode'); modeBtn.textContent='☀️';
+  } else {
+    document.body.classList.add('light-mode');
+  }
+})();
 
-/* ========= RTL ========= */
-body[dir="rtl"]{direction:rtl;text-align:right}
-body[dir="rtl"] .calculator-box h1{text-align:center}
+/* ======= Settings ======= */
+function openSettings(){
+  renderSettings();
+  showModal(settingsModal);
+}
+function closeSettings(){
+  settingsModal.style.display='none';
+  closeOverlay();
+  persistCurrentProfile(); // ✅ save any changes done in settings
+}
 
-/* iOS safe-area */
-body{ padding-top: env(safe-area-inset-top); }
+function renderSettings(){
+  // profiles
+  refreshProfileSelect();
+
+  // feature toggles
+  const tRepeat = document.getElementById('toggleRepeat');
+  const tClear  = document.getElementById('toggleClear');
+  const tReset  = document.getElementById('toggleReset');
+
+  tRepeat.checked = !!featureSettings.repeat;
+  tClear.checked  = !!featureSettings.clear;
+  tReset.checked  = !!featureSettings.reset;
+
+  applyFeatureVisibility();
+
+  tRepeat.onchange = ()=>{ featureSettings.repeat=tRepeat.checked; persistCurrentProfile(); applyFeatureVisibility(); };
+  tClear.onchange  = ()=>{ featureSettings.clear=tClear.checked;   persistCurrentProfile(); applyFeatureVisibility(); };
+  tReset.onchange  = ()=>{ featureSettings.reset=tReset.checked;   persistCurrentProfile(); applyFeatureVisibility(); };
+
+  // currency (per profile)
+  const curSel = document.getElementById('currencySelect');
+  if (curSel){
+    curSel.value = getCurrency();
+    curSel.onchange = ()=>{
+      localStorage.setItem('currency', curSel.value);
+      persistCurrentProfile();
+      updateBudget();
+      renderHistory();
+      renderAmountInput();
+    };
+  }
+
+  // cents mode (per profile)
+  const centsToggle = document.getElementById('toggleCentsMode');
+  if (centsToggle){
+    centsToggle.checked = centsMode;
+    centsToggle.onchange = ()=>{
+      centsMode = centsToggle.checked;
+      clearInput();
+      syncDecimalButton();
+      persistCurrentProfile();
+    };
+  }
+
+  // category list
+  const list=document.getElementById('categoryList');
+  list.innerHTML='';
+  categories.forEach((c,i)=>{
+    const row=document.createElement('div');
+    row.innerHTML = `${c}
+      <button style="float:right;background:#ef4444;color:#fff;border:none;border-radius:8px;padding:2px 8px;font-weight:800"
+        onclick="removeCategory(${i})">X</button>`;
+    list.appendChild(row);
+  });
+}
+
+function applyFeatureVisibility(){
+  repeatBtn.style.display = featureSettings.repeat ? '' : 'none';
+  clearBtn.style.display  = featureSettings.clear  ? '' : 'none';
+  resetBtn.style.display  = featureSettings.reset  ? '' : 'none';
+}
+
+function addCategory(){
+  const inp=document.getElementById('newCategoryInput');
+  const val=(inp.value||'').trim();
+  if(!val || categories.includes(val)) return;
+  categories.push(val);
+  inp.value='';
+  persistCurrentProfile();
+  renderSettings();
+}
+function removeCategory(i){
+  categories.splice(i,1);
+  persistCurrentProfile();
+  renderSettings();
+}
+
+/* ======= Language ======= */
+function toggleLanguage(){
+  lang = (lang==='en') ? 'ar' : 'en';
+  localStorage.setItem('lang', lang);
+  persistCurrentProfile();
+  applyLanguage();
+}
+function applyLanguage(){
+  const en={
+    title:'Money Budgeter',
+    settingsTitle:'Settings',
+    languageLabel:'Language:',
+    featuresLabel:'Features:',
+    categoryLabel:'Custom Categories:',
+    toggleRepeatLbl:'Show Repeat',
+    toggleClearLbl:'Show Clear History',
+    toggleResetLbl:'Show Reset',
+    langBtn:'Switch to Arabic 🇸🇦',
+    historyLabel:'History',
+    currencyLabel:'Currency:',
+    toggleCentsLbl:'Smart cents input',
+    profilesLabel:'Profiles:'
+  };
+  const ar={
+    title:'مدير الميزانية',
+    settingsTitle:'الإعدادات',
+    languageLabel:'اللغة:',
+    featuresLabel:'الخصائص:',
+    categoryLabel:'الفئات المخصصة:',
+    toggleRepeatLbl:'عرض التكرار',
+    toggleClearLbl:'عرض مسح السجل',
+    toggleResetLbl:'عرض إعادة الضبط',
+    langBtn:'التبديل إلى الإنجليزية 🇬🇧',
+    historyLabel:'السجل',
+    currencyLabel:'العملة:',
+    toggleCentsLbl:'إدخال ذكي (سنتات)',
+    profilesLabel:'البروفايلات:'
+  };
+  const t=(lang==='ar')?ar:en;
+
+  document.getElementById('title').textContent=t.title;
+  document.getElementById('settingsTitle').textContent=t.settingsTitle;
+  document.getElementById('languageLabel').textContent=t.languageLabel;
+  document.getElementById('featuresLabel').textContent=t.featuresLabel;
+  document.getElementById('categoryLabel').textContent=t.categoryLabel;
+  document.getElementById('toggleRepeatLbl').textContent=t.toggleRepeatLbl;
+  document.getElementById('toggleClearLbl').textContent=t.toggleClearLbl;
+  document.getElementById('toggleResetLbl').textContent=t.toggleResetLbl;
+  document.getElementById('langBtn').textContent=t.langBtn;
+  document.getElementById('historyLabel').textContent=t.historyLabel;
+  document.getElementById('currencyLabel').textContent=t.currencyLabel;
+  document.getElementById('toggleCentsLbl').textContent=t.toggleCentsLbl;
+  document.getElementById('profilesLabel').textContent=t.profilesLabel;
+
+  document.body.setAttribute('dir', (lang==='ar')?'rtl':'ltr');
+}
+applyLanguage();
+
+/* ======= Category totals ======= */
+function viewCategoryTotals(){
+  const totals = Object.fromEntries(categories.map(c=>[c,0]));
+  history.forEach(h=>{
+    const m = h.type.match(/^Subtract \((.+)\)$/);
+    if (m && totals[m[1]]!==undefined) totals[m[1]] += h.value;
+  });
+  const title = (lang==='ar'?'إجمالي الفئات':'Category Totals');
+
+  const m = document.createElement('div');
+  m.className = 'modal sleek-modal';
+  m.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+      <h3>${title}</h3>
+      <button class="close-btn" onclick="closeTempModals()">✖</button>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;width:100%;margin-top:8px;">
+      ${categories.map(c =>
+        `<button class="btn" style="width:90%;margin:6px 0;" disabled>${c}: ${formatMoney(totals[c])}</button>`
+      ).join('')}
+    </div>`;
+  document.body.appendChild(m);
+  showModal(m);
+}
+
+/* ======= Fullscreen history ======= */
+function openFullHistory(){
+  const holder = document.createElement('div');
+  holder.className = 'sleek-modal';
+
+  const panel = document.createElement('div');
+  panel.innerHTML =
+    `<h3 style="text-align:center;margin-bottom:10px;">${lang==='ar'?'السجل الكامل':'Full History'}</h3>` +
+    history.slice().reverse().map(it =>
+      `<div style="padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.08);">
+        ${it.timestamp} — ${it.type}: ${formatMoney(it.value)}
+      </div>`
+    ).join('') +
+    `<button class="btn" style="margin-top:10px;width:100%;" onclick="closeTempModals()">${lang==='ar'?'إغلاق':'Close'}</button>`;
+
+  holder.appendChild(panel);
+  document.body.appendChild(holder);
+  openOverlay();
+}
+document.getElementById('toggleHistoryBtn').addEventListener('click', openFullHistory);
+
+/* ======= Init ======= */
+function init(){
+  migrateOldDataIntoDefaultProfileIfNeeded();
+
+  // ensure active profile exists
+  const profiles = loadProfiles();
+  if (!getActiveProfileId() && profiles.length){
+    setActiveProfileId(profiles[0].id);
+  }
+
+  loadActiveProfileIntoApp();
+  refreshProfileSelect();
+
+  updateBudget();
+  renderHistory();
+  applyFeatureVisibility();
+  syncDecimalButton();
+  renderAmountInput();
+
+  modeBtn.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+}
+init();
+</script>
+
+<script src="/pwa-bridge.js"></script>
+
+<script>
+// Disable pinch-zoom, double-tap zoom, and ctrl+wheel zoom
+(function(){
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+  let lastTouch = 0;
+  document.addEventListener('touchend', function (e) {
+    const now = Date.now();
+    if (now - lastTouch <= 300) { e.preventDefault(); }
+    lastTouch = now;
+  }, { passive: false });
+  document.addEventListener('wheel', function (e) {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive: false });
+})();
+</script>
+
+</body>
+</html>
