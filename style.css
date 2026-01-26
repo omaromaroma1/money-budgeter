@@ -11,7 +11,7 @@ body{
 :root{
   --brand:#0a6bff;
 
-  /* MORE FROSTED (less clear) */
+  /* frosted */
   --glass-light:rgba(255,255,255,.38);
   --glass-dark:rgba(10,20,50,.60);
 
@@ -207,6 +207,35 @@ body.dark-mode #history{
 }
 #mode-toggle:hover{transform:rotate(18deg) scale(1.05)}
 
+/* ✅ PROFILE BADGE (TOP-LEFT CIRCLE) */
+#profile-badge{
+  position:absolute;
+  top:12px;
+  left:14px;
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  cursor:pointer;
+  user-select:none;
+  background:rgba(90,160,255,.22);
+  border:1px solid var(--glass-border-light);
+  backdrop-filter:blur(18px);
+  box-shadow:0 10px 26px rgba(10,20,40,.20);
+  transition:transform .12s ease, box-shadow .2s ease;
+}
+#profile-badge:hover{
+  transform:translateY(-1px) scale(1.03);
+  box-shadow:0 14px 32px rgba(10,20,40,.28);
+}
+body.dark-mode #profile-badge{
+  background:rgba(22,36,76,.55);
+  border-color:var(--glass-border-dark);
+}
+
 /* ========= OVERLAY ========= */
 #overlay{
   position:fixed;
@@ -248,9 +277,10 @@ body.dark-mode .modal{
   font-weight:900;
 }
 
-/* THEMED BUTTONS inside modals/settings */
+/* THEMED BUTTONS inside modals/settings/profile menu */
 .modal .btn,
-#settingsModal .btn{
+#settingsModal .btn,
+.profile-menu .btn{
   display:block;
   width:100%;
   margin:10px 0;
@@ -265,10 +295,21 @@ body.dark-mode .modal{
   transition:transform .12s ease, background .2s ease, box-shadow .2s ease;
 }
 .modal .btn:hover,
-#settingsModal .btn:hover{
+#settingsModal .btn:hover,
+.profile-menu .btn:hover{
   transform:translateY(-1px);
   background:rgba(18,36,78,1);
   box-shadow:0 14px 32px rgba(10,20,40,.55);
+}
+
+/* danger button for profile delete */
+.profile-menu .btn.danger{
+  background:#ef4444;
+  box-shadow:0 10px 26px rgba(239,68,68,.25);
+}
+.profile-menu .btn.danger:hover{
+  background:#ff3b3b;
+  box-shadow:0 14px 32px rgba(239,68,68,.35);
 }
 
 /* round close button */
@@ -297,7 +338,7 @@ body.dark-mode .modal{
 .modal.sleek-modal{
   width:min(440px,94vw);
   height:auto;
-  display:none; /* JS toggles display */
+  display:none;
   inset:auto;
   top:50%;
   left:50%;
@@ -341,6 +382,100 @@ body.dark-mode .sleek-modal > div{
   background:var(--glass-dark);
   border:1px solid var(--glass-border-dark);
   box-shadow:0 30px 78px rgba(0,0,0,.70);
+}
+
+/* ========= PROFILE MENU (SMALL POPUP) ========= */
+.profile-menu{
+  position:fixed;
+  top:74px;
+  left:18px;
+  width:min(320px,86vw);
+  border-radius:16px;
+  padding:14px;
+  background:var(--glass-light);
+  border:1px solid var(--glass-border-light);
+  backdrop-filter:blur(28px) saturate(170%);
+  box-shadow:0 22px 60px rgba(0,0,0,.28);
+  display:none;
+  z-index:9999;
+}
+body.dark-mode .profile-menu{
+  background:var(--glass-dark);
+  border-color:var(--glass-border-dark);
+  box-shadow:0 26px 70px rgba(0,0,0,.55);
+  color:#fff;
+}
+
+.profile-menu-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+.profile-menu-title{
+  font-weight:900;
+  font-size:16px;
+}
+
+.profile-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin:8px 0 12px;
+}
+.profile-row{
+  width:100%;
+  border:none;
+  border-radius:14px;
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  background:rgba(240,245,255,.32);
+  border:1px solid rgba(255,255,255,.45);
+  backdrop-filter:blur(18px);
+  font-weight:900;
+  color:inherit;
+  text-align:left;
+}
+body.dark-mode .profile-row{
+  background:rgba(18,30,64,.52);
+  border:1px solid rgba(210,225,255,.14);
+}
+.profile-row.active{
+  outline:2px solid rgba(10,107,255,.45);
+}
+
+.profile-emoji{
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(90,160,255,.18);
+  border:1px solid rgba(255,255,255,.35);
+  font-size:18px;
+}
+body.dark-mode .profile-emoji{
+  background:rgba(22,36,76,.45);
+  border-color:rgba(210,225,255,.12);
+}
+.profile-name{
+  flex:1;
+  font-size:14px;
+}
+
+.profile-actions{
+  display:flex;
+  gap:8px;
+}
+.profile-actions .btn{
+  margin:0;
+  flex:1;
+  padding:11px 10px;
 }
 
 /* ========= SETTINGS ========= */
@@ -395,7 +530,7 @@ body.dark-mode #settingsModal label{
 }
 #settingsModal label input[type="checkbox"]:checked::after{left:23px}
 
-/* ========= CATEGORIES LIST (MORE SPACED OUT) ========= */
+/* ========= CATEGORIES LIST ========= */
 #categoryList{
   margin-top:10px;
 }
@@ -444,7 +579,7 @@ body.dark-mode #newCategoryInput{
   color:#fff;
 }
 
-/* ========= Currency select ========= */
+/* currency select */
 .mb-select{
   width:100%;
   padding:12px 12px;
@@ -462,22 +597,13 @@ body.dark-mode .mb-select{
   color:#fff;
 }
 
-/* ✅ Profile select spacing (NEW) */
-#profileSelect{
-  margin-bottom:10px;
-}
-
-/* ✅ Make the “Add/Rename” row buttons not too tall (NEW) */
-#settingsModal div[style*="display:flex"][style*="gap:8px"] .btn{
-  margin:10px 0;
-}
-
 /* ========= INPUT ZOOM FIX ========= */
 input,select,textarea{font-size:16px}
 
 /* ========= RTL ========= */
 body[dir="rtl"]{direction:rtl;text-align:right}
 body[dir="rtl"] .calculator-box h1{text-align:center}
+body[dir="rtl"] .profile-row{text-align:right}
 
 /* iOS safe-area */
 body{ padding-top: env(safe-area-inset-top); }
