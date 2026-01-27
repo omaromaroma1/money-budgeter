@@ -1,7 +1,10 @@
 /* =========================
-Money Budgeter — CSS (FULL)
-Supports: profiles + settings + quick bar + filters + charts + PIN + modals
-Click-safe overlay ✅
+Money Budgeter — UPDATED CSS (FULL)
+Fixes:
+- Settings modal stuck on left ✅
+- All popups centered ✅
+- Fullscreen history still fullscreen ✅
+- Overlay click-safe ✅
 ========================= */
 
 /* ========= RESET ========= */
@@ -301,7 +304,14 @@ body.dark-mode #history{
   pointer-events:auto;
 }
 
-/* ========= MODALS ========= */
+/* ======================================================
+MODALS — IMPORTANT:
+- .modal (Settings) should be hidden by default (display:none)
+- dynamic popups use .modal.sleek-modal and must be visible immediately
+- fullscreen history uses .sleek-modal (WITHOUT .modal)
+====================================================== */
+
+/* Base modal (Settings) */
 .modal{
   position:fixed;
   left:50%;
@@ -316,7 +326,7 @@ body.dark-mode #history{
   border:1px solid var(--glass-border-light);
   backdrop-filter:blur(28px) saturate(170%);
   box-shadow:0 22px 60px rgba(0,0,0,.35);
-  display:none;
+  display:none;              /* ✅ Settings should NOT be permanently visible */
   z-index:9999;
 }
 body.dark-mode .modal{
@@ -338,12 +348,17 @@ body.dark-mode .modal{
 }
 body.dark-mode .modal hr{background:rgba(255,255,255,.12)}
 
-/* Modals created dynamically: .modal.sleek-modal */
+/* ✅ Dynamic centered modals (Subtract/Edit/Filters/Charts/PIN) */
 .modal.sleek-modal{
-  display:block; /* these are appended already visible */
+  display:block;             /* visible when appended */
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  inset:auto;
 }
 
-/* ========= THEMED BUTTONS ========= */
+/* ========= BUTTONS ========= */
 .btn{
   display:block;
   width:100%;
@@ -514,27 +529,7 @@ body.dark-mode #settingsModal label{
 }
 #settingsModal label input[type="checkbox"]:checked::after{left:23px}
 
-/* ========= LIST / INPUTS ========= */
-#categoryList{
-  margin-top:10px;
-}
-#categoryList > div{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:14px 16px;
-  margin:14px 0;
-  border-radius:14px;
-  background:rgba(245,248,255,.50);
-  border:1px dashed rgba(160,180,220,.55);
-  backdrop-filter:blur(16px);
-}
-body.dark-mode #categoryList > div{
-  background:rgba(16,28,58,.58);
-  border-color:rgba(210,225,255,.16);
-}
-
+/* ========= INPUTS / SELECT ========= */
 #newCategoryInput,
 #quickNew{
   width:100%;
@@ -570,10 +565,29 @@ body.dark-mode .mb-select{
   color:#fff;
 }
 
-/* ========= QUICK EDITOR ========= */
-.quick-editor{
+/* ========= CATEGORY LIST ========= */
+#categoryList{
   margin-top:10px;
 }
+#categoryList > div{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 16px;
+  margin:14px 0;
+  border-radius:14px;
+  background:rgba(245,248,255,.50);
+  border:1px dashed rgba(160,180,220,.55);
+  backdrop-filter:blur(16px);
+}
+body.dark-mode #categoryList > div{
+  background:rgba(16,28,58,.58);
+  border-color:rgba(210,225,255,.16);
+}
+
+/* ========= QUICK EDITOR ========= */
+.quick-editor{margin-top:10px}
 .quick-row{
   display:flex;
   align-items:center;
@@ -651,7 +665,6 @@ body.dark-mode .mini-btn{
 .pin-clear{background:rgba(120,140,190,.25)}
 .pin-error{color:#ef4444}
 
-/* shake animation */
 @keyframes shake{
   0%,100%{transform:translateX(0)}
   25%{transform:translateX(-6px)}
@@ -660,7 +673,7 @@ body.dark-mode .mini-btn{
 }
 .pin-shake{animation:shake .22s linear}
 
-/* ========= FULLSCREEN HISTORY WRAPPER ========= */
+/* ========= FULLSCREEN HISTORY WRAPPER ONLY ========= */
 .sleek-modal{
   position:fixed;
   inset:0;
@@ -690,10 +703,7 @@ body.dark-mode .sleek-modal > div{
 
 /* ========= SCROLLBARS ========= */
 #history::-webkit-scrollbar{width:6px}
-#history::-webkit-scrollbar-thumb{
-  background:#5aa3ff;
-  border-radius:8px;
-}
+#history::-webkit-scrollbar-thumb{background:#5aa3ff;border-radius:8px}
 
 /* ========= RTL ========= */
 body[dir="rtl"]{direction:rtl;text-align:right}
@@ -704,49 +714,3 @@ body{ padding-top: env(safe-area-inset-top); }
 
 /* ========= INPUT ZOOM FIX ========= */
 input,select,textarea{font-size:16px}
-
-/* =========================
-FINAL MODAL POSITION FIX
-========================= */
-
-/* Center ALL popups that are .modal (including .modal.sleek-modal) */
-.modal{
-  position:fixed !important;
-  left:50% !important;
-  top:50% !important;
-  transform:translate(-50%,-50%) !important;
-
-  inset:auto !important;
-  display:block !important;
-  margin:0 !important;
-
-  width:min(440px,94vw) !important;
-  max-height:80vh !important;
-  overflow:auto !important;
-
-  border-radius:16px !important;
-  padding:18px !important;
-  z-index:9999 !important;
-}
-
-/* Keep your glass theme */
-.modal{
-  background:var(--glass-light) !important;
-  border:1px solid var(--glass-border-light) !important;
-  backdrop-filter:blur(28px) saturate(170%) !important;
-  box-shadow:0 22px 60px rgba(0,0,0,.35) !important;
-}
-body.dark-mode .modal{
-  background:var(--glass-dark) !important;
-  border-color:var(--glass-border-dark) !important;
-  box-shadow:0 26px 70px rgba(0,0,0,.62) !important;
-}
-
-/* ONLY fullscreen history wrapper (it does NOT have .modal) */
-.sleek-modal:not(.modal){
-  position:fixed;
-  inset:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
