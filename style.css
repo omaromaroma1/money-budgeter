@@ -11,7 +11,6 @@ body{
 :root{
   --brand:#0a6bff;
 
-  /* frosted */
   --glass-light:rgba(255,255,255,.38);
   --glass-dark:rgba(10,20,50,.60);
 
@@ -20,7 +19,7 @@ body{
 
   --txt:#0b1220;
 
-  /* ✅ clearer menu glass */
+  /* clearer menu glass */
   --menu-light: rgba(255,255,255,.78);
   --menu-dark: rgba(10,20,50,.82);
   --menu-border-light: rgba(255,255,255,.85);
@@ -48,7 +47,7 @@ body.dark-mode{
   width:360px;
   margin:0 auto;
   padding:22px;
-  padding-top:72px; /* ✅ room for profile + settings icons */
+  padding-top:72px;
   border-radius:22px;
   position:relative;
   background:var(--glass-light);
@@ -66,7 +65,7 @@ body.dark-mode .calculator-box{
 .calculator-box h1{
   text-align:center;
   margin-bottom:14px;
-  padding:0 70px; /* ✅ clears left/right icons */
+  padding:0 70px;
   color:#7fb4ff;
   font-weight:800;
   letter-spacing:.2px;
@@ -87,7 +86,6 @@ body.light-mode h1{color:#0a6bff}
   font-size:22px;
   cursor:pointer;
   user-select:none;
-
   background:rgba(90,160,255,.22);
   border:1px solid var(--glass-border-light);
   backdrop-filter:blur(18px);
@@ -165,10 +163,7 @@ body.dark-mode #profile-badge{
   background:rgba(18,36,78,1);
   box-shadow:0 12px 26px rgba(10,20,40,.50);
 }
-.numpad button:disabled{
-  opacity:.35;
-  cursor:not-allowed;
-}
+.numpad button:disabled{opacity:.35;cursor:not-allowed}
 
 /* ========= MAIN BUTTONS ========= */
 .buttons{
@@ -218,7 +213,6 @@ body.dark-mode .history-toggle{
   color:#d7e6ff;
   border-color:var(--glass-border-dark);
 }
-
 #history{
   max-height:220px;
   overflow:auto;
@@ -235,7 +229,7 @@ body.dark-mode #history{
 #history::-webkit-scrollbar{width:6px}
 #history::-webkit-scrollbar-thumb{background:#5aa3ff;border-radius:8px}
 
-/* ========= THEME TOGGLE ICON ========= */
+/* ========= THEME TOGGLE ========= */
 #mode-toggle{
   position:fixed;
   right:16px;
@@ -280,13 +274,9 @@ body.dark-mode .modal{
   color:#fff;
   box-shadow:0 26px 70px rgba(0,0,0,.62);
 }
-.modal h3{
-  text-align:center;
-  margin-bottom:10px;
-  font-weight:900;
-}
+.modal h3{ text-align:center; margin-bottom:10px; font-weight:900; }
 
-/* THEMED BUTTONS inside modals/settings/profile menu */
+/* buttons inside modals/settings/profile */
 .modal .btn,
 #settingsModal .btn,
 .profile-menu .btn{
@@ -316,9 +306,7 @@ body.dark-mode .modal{
   background:linear-gradient(180deg,#ff4b4b,#e11d48);
   box-shadow:0 10px 24px rgba(225,29,72,.18);
 }
-.profile-menu .btn.danger:hover{
-  box-shadow:0 14px 30px rgba(225,29,72,.26);
-}
+.profile-menu .btn.danger:hover{ box-shadow:0 14px 30px rgba(225,29,72,.26); }
 
 /* round close button */
 .close-btn{
@@ -339,10 +327,7 @@ body.dark-mode .modal{
   box-shadow:0 0 12px rgba(42,139,255,.55);
 }
 
-/* ========= IMPORTANT FIX =========
-   Subtract & Category Totals popups use: class="modal sleek-modal"
-   We want those CENTERED like normal modals, not fullscreen.
-*/
+/* Subtract & Category Totals popups */
 .modal.sleek-modal{
   width:min(440px,94vw);
   height:auto;
@@ -351,8 +336,6 @@ body.dark-mode .modal{
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
-  justify-content:unset;
-  align-items:unset;
   background:var(--glass-light);
   border:1px solid var(--glass-border-light);
 }
@@ -361,13 +344,11 @@ body.dark-mode .modal.sleek-modal{
   border:1px solid var(--glass-border-dark);
 }
 
-/* ========= FULLSCREEN HISTORY (only for the history overlay wrapper) ========= */
+/* fullscreen history wrapper */
 .sleek-modal{
   position:fixed;
-  top:0;
-  left:0;
-  width:100vw;
-  height:100vh;
+  top:0;left:0;
+  width:100vw;height:100vh;
   display:flex;
   justify-content:center;
   align-items:center;
@@ -393,7 +374,7 @@ body.dark-mode .sleek-modal > div{
 }
 
 /* =========================
-   ✅ PROFILE MENU (CLEARER + THEMED)
+   PROFILE MENU (CLEAR + THEMED)
    ========================= */
 .profile-menu{
   position:fixed;
@@ -420,7 +401,6 @@ body.dark-mode .profile-menu{
   box-shadow:0 24px 70px rgba(0,0,0,.58);
   color:#fff;
 }
-
 @keyframes profilePop{
   from{transform:translateY(-6px) scale(.98);opacity:0}
   to{transform:translateY(0) scale(1);opacity:1}
@@ -455,6 +435,7 @@ body.dark-mode .profile-menu{
   align-items:center;
   gap:10px;
   cursor:pointer;
+  position:relative;
 
   background:rgba(255,255,255,.55);
   border:1px solid rgba(10,107,255,.18);
@@ -476,9 +457,7 @@ body.dark-mode .profile-row{
   border:1px solid rgba(210,225,255,.14);
   box-shadow:0 12px 26px rgba(0,0,0,.35);
 }
-body.dark-mode .profile-row:hover{
-  background:rgba(18,30,64,.78);
-}
+body.dark-mode .profile-row:hover{ background:rgba(18,30,64,.78); }
 
 .profile-row.active{
   outline:2px solid rgba(10,107,255,.55);
@@ -497,7 +476,6 @@ body.dark-mode .profile-row.active{
   align-items:center;
   justify-content:center;
   font-size:18px;
-
   background:rgba(90,160,255,.22);
   border:1px solid rgba(10,107,255,.18);
 }
@@ -509,6 +487,39 @@ body.dark-mode .profile-emoji{
   flex:1;
   font-size:14px;
   line-height:1.2;
+}
+
+/* ✅ checkmark element (hidden until switching) */
+.profile-check{
+  position:absolute;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%) scale(.6);
+  opacity:0;
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:1000;
+  color:#fff;
+  background:linear-gradient(180deg,#0a6bff,#094bd4);
+  box-shadow:0 10px 22px rgba(10,107,255,.25);
+  pointer-events:none;
+}
+
+/* ✅ when switching */
+.profile-row.switching{
+  transform:scale(.98);
+  opacity:.98;
+}
+.profile-row.switching .profile-check{
+  animation:checkPop .22s ease-out forwards;
+}
+@keyframes checkPop{
+  from{opacity:0; transform:translateY(-50%) scale(.6)}
+  to{opacity:1; transform:translateY(-50%) scale(1)}
 }
 
 .profile-actions{
@@ -531,7 +542,6 @@ body.dark-mode .profile-emoji{
 }
 body.dark-mode #settingsModal hr{background:rgba(255,255,255,.12)}
 
-/* feature toggles */
 #settingsModal label{
   display:flex;
   justify-content:space-between;
@@ -574,10 +584,8 @@ body.dark-mode #settingsModal label{
 }
 #settingsModal label input[type="checkbox"]:checked::after{left:23px}
 
-/* ========= CATEGORIES LIST ========= */
-#categoryList{
-  margin-top:10px;
-}
+/* categories list */
+#categoryList{ margin-top:10px; }
 #categoryList > div{
   display:flex;
   align-items:center;
@@ -606,7 +614,6 @@ body.dark-mode #categoryList > div{
   cursor:pointer;
 }
 
-/* add-category input */
 #newCategoryInput{
   width:100%;
   padding:12px 12px;
@@ -623,7 +630,6 @@ body.dark-mode #newCategoryInput{
   color:#fff;
 }
 
-/* currency select */
 .mb-select{
   width:100%;
   padding:12px 12px;
@@ -641,10 +647,10 @@ body.dark-mode .mb-select{
   color:#fff;
 }
 
-/* ========= INPUT ZOOM FIX ========= */
+/* iOS input zoom fix */
 input,select,textarea{font-size:16px}
 
-/* ========= RTL ========= */
+/* RTL */
 body[dir="rtl"]{direction:rtl;text-align:right}
 body[dir="rtl"] .calculator-box h1{text-align:center}
 body[dir="rtl"] .profile-row{text-align:right}
