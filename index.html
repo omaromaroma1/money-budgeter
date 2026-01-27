@@ -39,9 +39,7 @@
       <button onclick="appendNumber('9')">9</button>
       <button onclick="appendNumber('0')">0</button>
 
-      <!-- Decimal button becomes visible ONLY when Smart cents input is OFF -->
       <button id="decimalBtn" onclick="appendDecimal()">.</button>
-
       <button onclick="backspace()">⌫</button>
     </div>
 
@@ -64,10 +62,10 @@
   <!-- Theme toggle -->
   <div id="mode-toggle" onclick="toggleMode()">🌙</div>
 
-  <!-- Overlay (used for settings + profile menu + modals) -->
+  <!-- Overlay (used for settings + profile menu + temp modals) -->
   <div id="overlay"></div>
 
-  <!-- ✅ PROFILE MENU (SMALL POPUP, NOT IN SETTINGS) -->
+  <!-- ✅ PROFILE MENU (CLEAR + THEMED) -->
   <div id="profileMenu" class="profile-menu" role="dialog" aria-modal="true">
     <div class="profile-menu-head">
       <div class="profile-menu-title" id="profilesTitle">Profiles</div>
@@ -83,7 +81,7 @@
     </div>
   </div>
 
-  <!-- Settings modal (no profile stuff inside) -->
+  <!-- Settings modal -->
   <div id="settingsModal" class="modal" aria-modal="true" role="dialog">
     <h3 id="settingsTitle">Settings</h3>
     <hr />
@@ -124,6 +122,25 @@
   </div>
 
 <script>
+/* =========================
+   ✅ HAPTICS (MOBILE)
+   ========================= */
+function haptic(type='tap'){
+  // Vibration API works on many Android browsers; iOS often ignores it (safe).
+  if (!('vibrate' in navigator)) return;
+  try{
+    if (type === 'success') navigator.vibrate([12, 30, 12]);
+    else if (type === 'error') navigator.vibrate([30, 20, 30]);
+    else navigator.vibrate(10); // tap
+  }catch(e){}
+}
+
+// ✅ Haptic for ALL buttons automatically (every click/tap)
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if (btn && !btn.disabled) haptic('tap');
+}, true);
+
 /* ======= DOM ======= */
 const modeBtn = document.getElementById('mode-toggle');
 const overlay = document.getElementById('overlay');
@@ -227,7 +244,7 @@ function migrateOldDataIntoDefaultProfileIfNeeded(){
   });
 }
 
-/* ======= LIVE APP STATE (from active profile) ======= */
+/* ======= LIVE APP STATE ======= */
 let categories = [];
 let featureSettings = { repeat:true, clear:true, reset:true };
 let lang = 'en';
@@ -238,7 +255,6 @@ let centsMode = true;
 function persistCurrentProfile(){
   const id = getActiveProfileId();
   if (!id) return;
-
   writeProfileData(id, {
     budget,
     history,
@@ -267,7 +283,12 @@ function loadActiveProfileIntoApp(){
   localStorage.setItem('lang', lang);
 }
 
-/* ======= Profile UI (badge + menu) ======= */
+/* ======= Profile UI ======= */
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
 function getActiveProfileMeta(){
   const profiles = loadProfiles();
   const id = getActiveProfileId();
@@ -278,14 +299,15 @@ function renderProfileBadge(){
   profileBadge.textContent = p?.emoji || '🙂';
   profileBadge.title = p?.name || 'Profile';
 }
+
 function openProfileMenu(){
   renderProfileMenu();
   profileMenu.style.display = 'block';
   overlay.style.display = 'block';
+  haptic('tap');
 }
 function closeProfileMenu(){
   profileMenu.style.display = 'none';
-  // overlay may still be needed by settings/modals, so only close if settings is closed & no temp modals
   if (settingsModal.style.display !== 'block' && document.querySelectorAll('.sleek-modal').length === 0){
     overlay.style.display = 'none';
   }
@@ -295,6 +317,7 @@ function toggleProfileMenu(){
   if (open) closeProfileMenu();
   else openProfileMenu();
 }
+
 function renderProfileMenu(){
   renderProfileBadge();
 
@@ -304,21 +327,33 @@ function renderProfileMenu(){
 
   profiles.forEach(p=>{
     const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'profile-row' + (p.id===active ? ' active' : '');
     row.innerHTML = `
       <span class="profile-emoji">${p.emoji || '🙂'}</span>
       <span class="profile-name">${escapeHtml(p.name || 'Profile')}</span>
+      <span class="profile-check">✓</span>
     `;
-    row.onclick = ()=> switchProfile(p.id);
+
+    row.onclick = () => {
+      // ✅ only close (and animate) if switching to a different profile
+      if (p.id === active) return;
+
+      // ✅ checkmark animation
+      row.classList.add('switching');
+
+      // ✅ success haptic for switching
+      haptic('success');
+
+      // wait for animation then switch + close
+      setTimeout(()=>{
+        switchProfile(p.id);
+        closeProfileMenu();
+      }, 220);
+    };
+
     profileListEl.appendChild(row);
   });
-}
-
-/* Escape helper */
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, m => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[m]));
 }
 
 function switchProfile(id){
@@ -358,7 +393,11 @@ function addProfile(){
 
   writeProfileData(id, defaultProfileData());
 
+  // switch immediately
   switchProfile(id);
+  // keep menu open after add (feels better), but you can close if you want:
+  // closeProfileMenu();
+  haptic('success');
 }
 
 function editActiveProfile(){
@@ -379,6 +418,7 @@ function editActiveProfile(){
 
   renderProfileBadge();
   renderProfileMenu();
+  haptic('success');
 }
 
 function deleteProfile(){
@@ -387,6 +427,7 @@ function deleteProfile(){
 
   if (profiles.length <= 1){
     alert(lang==='ar' ? 'لا يمكن حذف آخر بروفايل.' : "You can't delete the last profile.");
+    haptic('error');
     return;
   }
 
@@ -418,6 +459,7 @@ function deleteProfile(){
 
   renderProfileBadge();
   renderProfileMenu();
+  haptic('success');
 }
 
 /* ======= Currency helpers ======= */
@@ -583,7 +625,7 @@ function resetBudget(){
 }
 function saveBudget(){
   updateBudget();
-  persistCurrentProfile(); // ✅ save into current profile
+  persistCurrentProfile();
 }
 function updateBudget(){
   document.getElementById('budget').textContent = `Budget: ${formatMoney(budget)}`;
@@ -591,6 +633,7 @@ function updateBudget(){
 
 /* ======= Theme ======= */
 function toggleMode(){
+  haptic('tap');
   const dark = document.body.classList.contains('dark-mode');
   document.body.classList.toggle('dark-mode', !dark);
   document.body.classList.toggle('light-mode', dark);
@@ -607,6 +650,7 @@ function toggleMode(){
 
 /* ======= Settings ======= */
 function openSettings(){
+  haptic('tap');
   renderSettings();
   settingsModal.style.display='block';
   overlay.style.display='block';
@@ -618,9 +662,7 @@ function closeSettings(){
   }
   persistCurrentProfile();
 }
-
 function renderSettings(){
-  // feature toggles
   const tRepeat = document.getElementById('toggleRepeat');
   const tClear  = document.getElementById('toggleClear');
   const tReset  = document.getElementById('toggleReset');
@@ -635,7 +677,6 @@ function renderSettings(){
   tClear.onchange  = ()=>{ featureSettings.clear=tClear.checked;   persistCurrentProfile(); applyFeatureVisibility(); };
   tReset.onchange  = ()=>{ featureSettings.reset=tReset.checked;   persistCurrentProfile(); applyFeatureVisibility(); };
 
-  // currency (per profile)
   const curSel = document.getElementById('currencySelect');
   if (curSel){
     curSel.value = getCurrency();
@@ -648,7 +689,6 @@ function renderSettings(){
     };
   }
 
-  // cents mode (per profile)
   const centsToggle = document.getElementById('toggleCentsMode');
   if (centsToggle){
     centsToggle.checked = centsMode;
@@ -660,7 +700,6 @@ function renderSettings(){
     };
   }
 
-  // category list
   const list=document.getElementById('categoryList');
   list.innerHTML='';
   categories.forEach((c,i)=>{
@@ -701,33 +740,19 @@ function toggleLanguage(){
 }
 function applyLanguage(){
   const en={
-    title:'Money Budgeter',
-    settingsTitle:'Settings',
-    languageLabel:'Language:',
-    featuresLabel:'Features:',
-    categoryLabel:'Custom Categories:',
-    toggleRepeatLbl:'Show Repeat',
-    toggleClearLbl:'Show Clear History',
-    toggleResetLbl:'Show Reset',
-    langBtn:'Switch to Arabic 🇸🇦',
-    historyLabel:'History',
-    currencyLabel:'Currency:',
-    toggleCentsLbl:'Smart cents input',
+    title:'Money Budgeter', settingsTitle:'Settings', languageLabel:'Language:',
+    featuresLabel:'Features:', categoryLabel:'Custom Categories:',
+    toggleRepeatLbl:'Show Repeat', toggleClearLbl:'Show Clear History',
+    toggleResetLbl:'Show Reset', langBtn:'Switch to Arabic 🇸🇦',
+    historyLabel:'History', currencyLabel:'Currency:', toggleCentsLbl:'Smart cents input',
     profilesTitle:'Profiles'
   };
   const ar={
-    title:'مدير الميزانية',
-    settingsTitle:'الإعدادات',
-    languageLabel:'اللغة:',
-    featuresLabel:'الخصائص:',
-    categoryLabel:'الفئات المخصصة:',
-    toggleRepeatLbl:'عرض التكرار',
-    toggleClearLbl:'عرض مسح السجل',
-    toggleResetLbl:'عرض إعادة الضبط',
-    langBtn:'التبديل إلى الإنجليزية 🇬🇧',
-    historyLabel:'السجل',
-    currencyLabel:'العملة:',
-    toggleCentsLbl:'إدخال ذكي (سنتات)',
+    title:'مدير الميزانية', settingsTitle:'الإعدادات', languageLabel:'اللغة:',
+    featuresLabel:'الخصائص:', categoryLabel:'الفئات المخصصة:',
+    toggleRepeatLbl:'عرض التكرار', toggleClearLbl:'عرض مسح السجل',
+    toggleResetLbl:'عرض إعادة الضبط', langBtn:'التبديل إلى الإنجليزية 🇬🇧',
+    historyLabel:'السجل', currencyLabel:'العملة:', toggleCentsLbl:'إدخال ذكي (سنتات)',
     profilesTitle:'البروفايلات'
   };
   const t=(lang==='ar')?ar:en;
@@ -744,7 +769,6 @@ function applyLanguage(){
   document.getElementById('historyLabel').textContent=t.historyLabel;
   document.getElementById('currencyLabel').textContent=t.currencyLabel;
   document.getElementById('toggleCentsLbl').textContent=t.toggleCentsLbl;
-
   document.getElementById('profilesTitle').textContent = t.profilesTitle;
 
   document.body.setAttribute('dir', (lang==='ar')?'rtl':'ltr');
@@ -801,12 +825,10 @@ document.getElementById('toggleHistoryBtn').addEventListener('click', openFullHi
 function init(){
   migrateOldDataIntoDefaultProfileIfNeeded();
 
-  // ensure active profile exists
   const profiles = loadProfiles();
   if (!getActiveProfileId() && profiles.length){
     setActiveProfileId(profiles[0].id);
   }
-  // if still none (edge case), create one
   if (!getActiveProfileId()){
     const id = uid();
     saveProfiles([{ id, name:'Main', emoji:'💰' }]);
@@ -821,7 +843,6 @@ function init(){
   applyFeatureVisibility();
   syncDecimalButton();
   renderAmountInput();
-
   renderProfileBadge();
 
   modeBtn.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
