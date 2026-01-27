@@ -1,12 +1,8 @@
 /* =========================================================
-Money Budgeter — CLEAN “CENTERED POPUPS” CSS (FULL)
-Goal: Every popup (Subtract / Edit / Filters / Charts / PIN) is DEAD-CENTER,
-and only Fullscreen History uses the fullscreen wrapper.
-
-This CSS avoids class conflicts by:
-✅ Making .sleek-modal fullscreen ONLY when it is NOT also .modal
-✅ Forcing .modal and .modal.sleek-modal to center with !important
-✅ Keeping Settings hidden until JS opens it
+Money Budgeter — FULL CSS (HARD-CENTERED MODALS)
+This version FORCE-centers every popup using:
+position:fixed; inset:0; margin:auto;
+(no transform, no 50% hacks)
 ========================================================= */
 
 /* ========= RESET ========= */
@@ -307,36 +303,35 @@ body.dark-mode #history{
 }
 
 /* =========================================================
-   ✅ FINAL POPUP CENTERING (THE IMPORTANT PART)
-   - Settings is .modal (display:none until opened)
-   - Dynamic popups are .modal.sleek-modal (must appear centered)
-   - Fullscreen History wrapper is .sleek-modal (WITHOUT .modal)
+   ✅ MODALS — HARD CENTER METHOD (inset:0 + margin:auto)
 ========================================================= */
 
-/* Base modal styling */
+/* Base modal (Settings) */
 .modal{
+  position:fixed !important;
+  inset:0 !important;          /* <- force full inset */
+  margin:auto !important;      /* <- centers the box */
+  transform:none !important;   /* <- kill any old transforms */
+  left:auto !important;
+  top:auto !important;
+  right:auto !important;
+  bottom:auto !important;
+
   width:min(440px,94vw);
   max-height:80vh;
+  height:auto;
+
   overflow:auto;
   border-radius:16px;
   padding:18px;
+
   background:var(--glass-light);
   border:1px solid var(--glass-border-light);
   backdrop-filter:blur(28px) saturate(170%);
   box-shadow:0 22px 60px rgba(0,0,0,.35);
+
   z-index:9999;
-
-  /* center */
-  position:fixed !important;
-  left:50% !important;
-  top:50% !important;
-  transform:translate(-50%,-50%) !important;
-  right:auto !important;
-  bottom:auto !important;
-  inset:auto !important;
-  margin:0 !important;
-
-  display:none; /* settings default */
+  display:none;               /* settings hidden by default */
 }
 body.dark-mode .modal{
   background:var(--glass-dark);
@@ -350,7 +345,7 @@ body.dark-mode .modal{
   display:block !important;
 }
 
-/* Fullscreen wrapper ONLY for history (sleek-modal without modal) */
+/* Fullscreen history wrapper ONLY (sleek-modal without modal) */
 .sleek-modal:not(.modal){
   position:fixed;
   inset:0;
@@ -378,7 +373,7 @@ body.dark-mode .sleek-modal:not(.modal) > div{
   box-shadow:0 30px 78px rgba(0,0,0,.70);
 }
 
-/* ========= THEMED BUTTONS ========= */
+/* ========= BUTTONS ========= */
 .btn{
   display:block;
   width:100%;
@@ -443,32 +438,6 @@ body.dark-mode .profile-menu{
   border-color:var(--glass-border-dark);
 }
 
-.profile-menu-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.profile-row-wrap{display:flex;align-items:center;gap:8px;margin:8px 0}
-.profile-row{
-  flex:1;display:flex;align-items:center;gap:10px;
-  padding:10px 12px;border-radius:12px;border:none;
-  font-weight:900;cursor:pointer;
-  background:rgba(13,27,56,.92);color:#fff;
-  box-shadow:0 8px 18px rgba(10,20,40,.30);
-}
-.profile-row.active{outline:2px solid var(--brand)}
-.profile-check{margin-left:auto;opacity:0;font-weight:900}
-.profile-row.active .profile-check{opacity:1}
-.profile-row-actions{display:flex;gap:6px}
-.mini-icon{
-  border:none;border-radius:10px;padding:8px 9px;
-  cursor:pointer;font-weight:900;
-  background:rgba(90,160,255,.20);
-  border:1px solid rgba(255,255,255,.45);
-}
-body.dark-mode .mini-icon{
-  background:rgba(22,36,76,.55);
-  border-color:var(--glass-border-dark);
-  color:#fff;
-}
-.mini-icon.danger{background:var(--danger);border-color:transparent;color:#fff}
-
 /* ========= SETTINGS TOGGLES ========= */
 #settingsModal label{
   display:flex;
@@ -486,6 +455,7 @@ body.dark-mode #settingsModal label{
   background:rgba(18,30,64,.52);
   border-color:rgba(210,225,255,.14);
 }
+
 #settingsModal label input[type="checkbox"]{
   appearance:none;
   width:48px;height:28px;
@@ -558,13 +528,6 @@ body.dark-mode .mb-select{
 }
 .pin-key:hover{transform:translateY(-1px); background:rgba(18,36,78,1)}
 .pin-error{color:#ef4444}
-@keyframes shake{
-  0%,100%{transform:translateX(0)}
-  25%{transform:translateX(-6px)}
-  50%{transform:translateX(6px)}
-  75%{transform:translateX(-4px)}
-}
-.pin-shake{animation:shake .22s linear}
 
 /* ========= SCROLLBARS ========= */
 #history::-webkit-scrollbar{width:6px}
