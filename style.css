@@ -1,11 +1,13 @@
-/* =========================
-Money Budgeter — UPDATED CSS (FULL + FINAL CENTER FIX)
-Fixes:
-- Settings modal normal (display:none)
-- ALL popups centered (Subtract/Edit/Filters/Charts/PIN)
-- Fullscreen history stays fullscreen
-- No bottom-left / off-screen on iOS
-========================= */
+/* =========================================================
+Money Budgeter — CLEAN “CENTERED POPUPS” CSS (FULL)
+Goal: Every popup (Subtract / Edit / Filters / Charts / PIN) is DEAD-CENTER,
+and only Fullscreen History uses the fullscreen wrapper.
+
+This CSS avoids class conflicts by:
+✅ Making .sleek-modal fullscreen ONLY when it is NOT also .modal
+✅ Forcing .modal and .modal.sleek-modal to center with !important
+✅ Keeping Settings hidden until JS opens it
+========================================================= */
 
 /* ========= RESET ========= */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -289,7 +291,7 @@ body.dark-mode #history{
 }
 #mode-toggle:hover{transform:rotate(18deg) scale(1.05)}
 
-/* ========= OVERLAY (CLICK-SAFE) ========= */
+/* ========= OVERLAY ========= */
 #overlay{
   position:fixed;
   inset:0;
@@ -304,16 +306,15 @@ body.dark-mode #history{
   pointer-events:auto;
 }
 
-/* ======================================================
-MODALS — FINAL DEFINITIONS (NO CONFLICTS)
-====================================================== */
+/* =========================================================
+   ✅ FINAL POPUP CENTERING (THE IMPORTANT PART)
+   - Settings is .modal (display:none until opened)
+   - Dynamic popups are .modal.sleek-modal (must appear centered)
+   - Fullscreen History wrapper is .sleek-modal (WITHOUT .modal)
+========================================================= */
 
-/* Base modal (Settings) - hidden until JS opens it */
+/* Base modal styling */
 .modal{
-  position:fixed;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
   width:min(440px,94vw);
   max-height:80vh;
   overflow:auto;
@@ -323,8 +324,19 @@ MODALS — FINAL DEFINITIONS (NO CONFLICTS)
   border:1px solid var(--glass-border-light);
   backdrop-filter:blur(28px) saturate(170%);
   box-shadow:0 22px 60px rgba(0,0,0,.35);
-  display:none;
   z-index:9999;
+
+  /* center */
+  position:fixed !important;
+  left:50% !important;
+  top:50% !important;
+  transform:translate(-50%,-50%) !important;
+  right:auto !important;
+  bottom:auto !important;
+  inset:auto !important;
+  margin:0 !important;
+
+  display:none; /* settings default */
 }
 body.dark-mode .modal{
   background:var(--glass-dark);
@@ -332,30 +344,13 @@ body.dark-mode .modal{
   color:#fff;
   box-shadow:0 26px 70px rgba(0,0,0,.62);
 }
-.modal h3{
-  text-align:center;
-  margin-bottom:10px;
-  font-weight:900;
-}
-.modal hr{
-  border:none;
-  height:1px;
-  background:rgba(255,255,255,.35);
-  margin:10px 0 12px;
-}
-body.dark-mode .modal hr{background:rgba(255,255,255,.12)}
 
-/* ✅ Dynamic popups: they are .modal.sleek-modal and MUST be centered + visible */
+/* Dynamic popups: visible immediately */
 .modal.sleek-modal{
-  display:block;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  inset:auto;                 /* critical on iOS */
+  display:block !important;
 }
 
-/* ✅ IMPORTANT: fullscreen wrapper rules apply ONLY to history wrapper
-   (history wrapper is .sleek-modal WITHOUT .modal) */
+/* Fullscreen wrapper ONLY for history (sleek-modal without modal) */
 .sleek-modal:not(.modal){
   position:fixed;
   inset:0;
@@ -383,7 +378,7 @@ body.dark-mode .sleek-modal:not(.modal) > div{
   box-shadow:0 30px 78px rgba(0,0,0,.70);
 }
 
-/* ========= BUTTONS ========= */
+/* ========= THEMED BUTTONS ========= */
 .btn{
   display:block;
   width:100%;
@@ -447,30 +442,14 @@ body.dark-mode .profile-menu{
   background:var(--glass-dark);
   border-color:var(--glass-border-dark);
 }
-.profile-menu-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
-.profile-row-wrap{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin:8px 0;
-}
+
+.profile-menu-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.profile-row-wrap{display:flex;align-items:center;gap:8px;margin:8px 0}
 .profile-row{
-  flex:1;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px 12px;
-  border-radius:12px;
-  border:none;
-  font-weight:900;
-  cursor:pointer;
-  background:rgba(13,27,56,.92);
-  color:#fff;
+  flex:1;display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:12px;border:none;
+  font-weight:900;cursor:pointer;
+  background:rgba(13,27,56,.92);color:#fff;
   box-shadow:0 8px 18px rgba(10,20,40,.30);
 }
 .profile-row.active{outline:2px solid var(--brand)}
@@ -478,11 +457,8 @@ body.dark-mode .profile-menu{
 .profile-row.active .profile-check{opacity:1}
 .profile-row-actions{display:flex;gap:6px}
 .mini-icon{
-  border:none;
-  border-radius:10px;
-  padding:8px 9px;
-  cursor:pointer;
-  font-weight:900;
+  border:none;border-radius:10px;padding:8px 9px;
+  cursor:pointer;font-weight:900;
   background:rgba(90,160,255,.20);
   border:1px solid rgba(255,255,255,.45);
 }
@@ -491,11 +467,7 @@ body.dark-mode .mini-icon{
   border-color:var(--glass-border-dark);
   color:#fff;
 }
-.mini-icon.danger{
-  background:var(--danger);
-  border-color:transparent;
-  color:#fff;
-}
+.mini-icon.danger{background:var(--danger);border-color:transparent;color:#fff}
 
 /* ========= SETTINGS TOGGLES ========= */
 #settingsModal label{
@@ -539,8 +511,7 @@ body.dark-mode #settingsModal label{
 #settingsModal label input[type="checkbox"]:checked::after{left:23px}
 
 /* ========= INPUTS / SELECT ========= */
-#newCategoryInput,
-#quickNew{
+#newCategoryInput, #quickNew{
   width:100%;
   padding:12px 12px;
   margin-top:10px;
@@ -570,43 +541,6 @@ body.dark-mode #quickNew{
 body.dark-mode .mb-select{
   background:rgba(16,28,58,.55);
   border-color:rgba(210,225,255,.18);
-  color:#fff;
-}
-
-/* ========= QUICK EDITOR ========= */
-.quick-editor{margin-top:10px}
-.quick-row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px;
-  margin:8px 0;
-  border-radius:14px;
-  background:rgba(245,248,255,.5);
-  border:1px dashed rgba(160,180,220,.55);
-}
-body.dark-mode .quick-row{
-  background:rgba(16,28,58,.58);
-  border-color:rgba(210,225,255,.16);
-}
-.quick-row-actions{display:flex;gap:6px}
-.mini-btn{
-  border:none;
-  border-radius:10px;
-  padding:8px 9px;
-  cursor:pointer;
-  font-weight:900;
-  background:rgba(90,160,255,.20);
-  border:1px solid rgba(255,255,255,.45);
-}
-body.dark-mode .mini-btn{
-  background:rgba(22,36,76,.55);
-  border-color:var(--glass-border-dark);
-  color:#fff;
-}
-.mini-btn.danger{
-  background:var(--danger);
-  border-color:transparent;
   color:#fff;
 }
 
