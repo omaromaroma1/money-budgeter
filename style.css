@@ -704,3 +704,32 @@ body{ padding-top: env(safe-area-inset-top); }
 
 /* ========= INPUT ZOOM FIX ========= */
 input,select,textarea{font-size:16px}
+
+/* ✅ Force any element that is BOTH .modal and .sleek-modal to be CENTERED */
+.modal.sleek-modal{
+  position:fixed !important;
+  left:50% !important;
+  top:50% !important;
+  transform:translate(-50%,-50%) !important;
+
+  width:min(440px,94vw) !important;
+  max-height:80vh !important;
+  overflow:auto !important;
+
+  display:block !important;
+  inset:auto !important;
+
+  /* keep the glass look */
+  background:var(--glass-light) !important;
+  border:1px solid var(--glass-border-light) !important;
+  backdrop-filter:blur(28px) saturate(170%) !important;
+  box-shadow:0 22px 60px rgba(0,0,0,.35) !important;
+  border-radius:16px !important;
+  padding:18px !important;
+  z-index:9999 !important;
+}
+body.dark-mode .modal.sleek-modal{
+  background:var(--glass-dark) !important;
+  border-color:var(--glass-border-dark) !important;
+  box-shadow:0 26px 70px rgba(0,0,0,.62) !important;
+}
