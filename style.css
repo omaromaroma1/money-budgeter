@@ -313,6 +313,10 @@ body.dark-mode .filter-chip{
   -webkit-backdrop-filter:blur(14px) saturate(130%);
 }
 
+#overlay.active{
+  display:block;
+}
+
 .modal{
   position:fixed;
   inset:0;
