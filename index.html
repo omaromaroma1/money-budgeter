@@ -1172,6 +1172,8 @@ function openHistoryViewer(id){
 }
 
 function setChatOpen(open){
+  document.body.classList.toggle('gpt-open', open);
+
   gptWidget.classList.toggle('open', open);
   if (open){
     startFreshChat();
@@ -1181,6 +1183,7 @@ function setChatOpen(open){
     addHistoryConversation(gptSession);
     gptSession = [];
     gptMessages.innerHTML = '';
+    closeHistoryDrawer();
   }
 }
 
