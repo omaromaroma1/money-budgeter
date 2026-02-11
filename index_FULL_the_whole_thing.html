@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Money Budgeter</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0a6bff" />
+
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- ✅ Fix click-block + z-index + history right -->
+  <style>
+    #overlay{ pointer-events:none; }
+    #overlay.active{ pointer-events:auto; }
+
+    #overlay{ z-index: 9000 !important; }
+    .modal, .profile-menu{ z-index: 9001 !important; }
+    .sleek-modal, .sleek-modal:not(.modal){ z-index: 9002 !important; }
+
+    #gpt-fab{ z-index: 20001 !important; }
+    #gptWidget{ z-index: 20002 !important; }
+    #gpt-history-tab{ z-index: 20003 !important; }
+    #gpt-history-drawer{ z-index: 20004 !important; }
+
+    #gpt-history-tab, #gpt-history-drawer{ display:none; }
+    body.gpt-open #gpt-history-tab, body.gpt-open #gpt-history-drawer{ display:block; }
+
+    #gpt-history-tab{
+      left:auto !important;
+      right:0 !important;
+      border-radius:14px 0 0 14px !important;
+    }
+    #gpt-history-drawer{
+      left:auto !important;
+      right:12px !important;
+      transform:translateY(-50%) translateX(18px) !important;
+    }
+    #gpt-history-drawer.open{
+      transform:translateY(-50%) translateX(0) !important;
+    }
+  </style>
+</head>
+
+<body class="light-mode">
+  <div class="calculator-box">
+    <div id="profile-badge" onclick="toggleProfileMenu()" aria-label="Profiles">🙂</div>
+    <div id="settings-icon" onclick="openSettings()">⚙️</div>
+
+    <h1 id="title">Money Budgeter</h1>
+    <div id="clock">🕒 --:--</div>
+    <div id="budget">Budget: $0.00</div>
+
+    <input id="input-display" placeholder="0.00" readonly />
+    <div id="quickBar" class="quick-bar"></div>
+
+    <div class="numpad">
+      <button onclick="appendNumber('1')">1</button>
+      <button onclick="appendNumber('2')">2</button>
+      <button onclick="appendNumber('3')">3</button>
+      <button onclick="appendNumber('4')">4</button>
+      <button onclick="appendNumber('5')">5</button>
+      <button onclick="appendNumber('6')">6</button>
+      <button onclick="appendNumber('7')">7</button>
+      <button onclick="appendNumber('8')">8</button>
+      <button onclick="appendNumber('9')">9</button>
+      <button id="zeroBtn" onclick="appendNumber('0')">0</button>
+
+      <button id="decimalBtn" onclick="appendDecimal()">.</button>
+      <button id="backspaceBtn" onclick="backspace()">⌫</button>
+    </div>
+
+    <div class="buttons">
+      <button id="addBtn" onclick="submitAmount('add')">Add</button>
+      <button id="subtractBtn" onclick="openSubtract()">Subtract</button>
+      <button id="clearBtn" onclick="clearHistory()">Clear History</button>
+      <button id="resetBtn" onclick="resetBudget()">Reset</button>
+      <button id="chartsBtn" onclick="openCharts()">📈 Charts</button>
+      <button id="filterBtn" onclick="openFilters()">🔎 Filter</button>
+    </div>
+
+    <div class="history-header">
+      <div id="historyLabel">History</div>
+      <button id="toggleHistoryBtn" class="history-toggle">Expand ⇵</button>
+    </div>
+
+    <div id="history"></div>
+  </div>
+
+  <div id="mode-toggle" onclick="toggleMode()">🌙</div>
+  <div id="overlay"></div>
+
+  <div id="profileMenu" class="profile-menu" role="dialog" aria-modal="true">
+    <div class="profile-menu-head">
+      <div id="profilesTitle" style="font-weight:900;">Profiles</div>
+      <button class="close-btn" onclick="closeProfileMenu()">✖</button>
+    </div>
+    <div id="profileList" class="profile-list"></div>
+    <button class="btn" onclick="addProfile()">➕ Add</button>
+  </div>
+
+  <div id="settingsModal" class="modal" aria-modal="true" role="dialog">
+    <h3 id="settingsTitle">Settings</h3>
+    <hr />
+
+    <h4 id="languageLabel">Language:</h4>
+    <button class="btn" onclick="toggleLanguage()"><span id="langBtn">Switch to Arabic 🇸🇦</span></button>
+
+    <h4 id="currencyLabel">Currency:</h4>
+    <select id="currencySelect" class="mb-select">
+      <option value="USD">USD ($)</option>
+      <option value="QAR">QAR (ر.ق)</option>
+      <option value="EUR">EUR (€)</option>
+      <option value="GBP">GBP (£)</option>
+      <option value="SAR">SAR (ر.س)</option>
+      <option value="AED">AED (د.إ)</option>
+      <option value="JOD">JOD (د.ا)</option>
+      <option value="KWD">KWD (د.ك)</option>
+    </select>
+
+    <h4 id="featuresLabel">Features:</h4>
+
+    <label>
+      <span id="toggleCentsLbl">Smart cents input</span>
+      <input type="checkbox" id="toggleCentsMode" />
+    </label>
+
+    <label><span id="toggleClearLbl">Show Clear History</span><input type="checkbox" id="toggleClear" /></label>
+    <label><span id="toggleResetLbl">Show Reset</span><input type="checkbox" id="toggleReset" /></label>
+
+    <h4 id="quickLabel">Quick Amounts:</h4>
+    <div id="quickEditor" class="quick-editor"></div>
+    <input id="quickNew" type="number" inputmode="numeric" placeholder="Add amount (ex: 7)" />
+    <button class="btn" onclick="addQuickAmount()">Add Quick Amount</button>
+
+    <h4 id="pinLabel">PIN Lock:</h4>
+    <button class="btn" onclick="openPinSettings()">🔒 PIN Settings</button>
+
+    <h4 id="categoryLabel">Custom Categories:</h4>
+    <div id="categoryList"></div>
+    <input type="text" id="newCategoryInput" placeholder="Add new category" />
+    <button class="btn" onclick="addCategory()">Add Category</button>
+
+    <button class="btn" onclick="closeSettings()">Close</button>
+  </div>
+
+  <!-- GPT UI -->
+  <button id="gpt-fab" type="button" aria-label="Chat">💬</button>
+  <div id="gpt-history-tab" role="button" aria-label="Chat history">History</div>
+
+  <div id="gpt-history-drawer" aria-label="Chat history drawer">
+    <div class="gpt-history-head">
+      <div style="font-weight:900">Chat History</div>
+      <button class="close-btn" type="button" onclick="closeHistoryDrawer()">✖</button>
+    </div>
+    <div class="gpt-history-list" id="gpt-history-list"></div>
+  </div>
+
+  <div id="gptWidget" class="gpt-widget">
+    <div class="gpt-header">
+      <div class="gpt-title">ChatGPT</div>
+      <button class="gpt-close" type="button" onclick="setChatOpen(false)">✖</button>
+    </div>
+    <div class="gpt-messages" id="gptMessages"></div>
+    <div class="gpt-inputbar">
+      <input id="gptInput" type="text" placeholder="Type a message..." autocomplete="off" />
+      <button id="gptSend" type="button">Send</button>
+    </div>
+  </div>
+
+  <!-- Minimal chat CSS (so it works even if style.css misses it) -->
+  <style>
+    #gpt-fab{
+      position:fixed; left:16px; bottom:16px;
+      width:54px; height:54px; border-radius:999px; border:none;
+      cursor:pointer; user-select:none; font-size:22px; font-weight:900;
+      background:rgba(13,27,56,.96); color:#fff;
+      box-shadow:0 14px 32px rgba(10,20,40,.45);
+    }
+    #gptWidget{
+      position:fixed; left:16px; bottom:84px;
+      width:min(360px,92vw); height:min(520px,78vh);
+      border-radius:18px; overflow:hidden;
+      background:rgba(255,255,255,.40);
+      border:1px solid rgba(255,255,255,.60);
+      backdrop-filter:blur(24px) saturate(160%);
+      -webkit-backdrop-filter:blur(24px) saturate(160%);
+      box-shadow:0 22px 60px rgba(0,0,0,.35);
+      opacity:0; transform:translateY(10px);
+      pointer-events:none;
+      transition:opacity .18s ease, transform .18s ease;
+    }
+    body.dark-mode #gptWidget{
+      background:rgba(10,20,50,.62);
+      border-color:rgba(210,225,255,.16);
+      box-shadow:0 26px 70px rgba(0,0,0,.62);
+    }
+    #gptWidget.open{ opacity:1; transform:translateY(0); pointer-events:auto; }
+
+    .gpt-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px; font-weight:900;
+      background:rgba(90,160,255,.16);
+      border-bottom:1px solid rgba(255,255,255,.18);
+    }
+    body.dark-mode .gpt-header{ background:rgba(22,36,76,.55); border-bottom:1px solid rgba(210,225,255,.10); }
+    .gpt-close{
+      width:34px; height:34px; border-radius:50%; border:none;
+      cursor:pointer; font-weight:900; background:#0a6bff; color:#fff;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .gpt-messages{
+      height:calc(100% - 112px);
+      overflow:auto; padding:12px;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .gpt-msg{
+      max-width:86%;
+      padding:10px 12px; border-radius:14px;
+      font-weight:800; line-height:1.35;
+      white-space:pre-wrap;
+      overflow-wrap:anywhere; word-break:break-word;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(13,27,56,.28);
+    }
+    .gpt-msg.user{ margin-left:auto; background:rgba(10,107,255,.16); border-color:rgba(10,107,255,.22); }
+    .gpt-msg.assistant{ margin-right:auto; }
+    .gpt-inputbar{
+      display:flex; gap:8px; padding:12px;
+      border-top:1px solid rgba(255,255,255,.18);
+    }
+    .gpt-inputbar input{
+      flex:1; padding:12px 12px; border-radius:14px;
+      border:1px solid rgba(255,255,255,.28);
+      background:rgba(90,160,255,.10);
+      color:inherit; outline:none;
+    }
+    body.dark-mode .gpt-inputbar input{ border-color:rgba(210,225,255,.14); background:rgba(16,28,58,.55); }
+    .gpt-inputbar button{
+      padding:12px 14px; border:none; border-radius:14px;
+      cursor:pointer; font-weight:900;
+      background:rgba(13,27,56,.96); color:#fff;
+      box-shadow:0 10px 26px rgba(10,20,40,.25);
+    }
+
+    #gpt-history-tab{
+      position:fixed; top:50%;
+      transform:translateY(-50%);
+      padding:10px 12px;
+      font-weight:900; cursor:pointer;
+      background:rgba(13,27,56,.96); color:#fff;
+    }
+    #gpt-history-drawer{
+      position:fixed; top:50%;
+      transform:translateY(-50%) translateX(18px);
+      width:min(320px,86vw); max-height:70vh;
+      overflow:hidden; border-radius:18px;
+      background:rgba(255,255,255,.40);
+      border:1px solid rgba(255,255,255,.60);
+      backdrop-filter:blur(24px) saturate(160%);
+      -webkit-backdrop-filter:blur(24px) saturate(160%);
+      box-shadow:0 22px 60px rgba(0,0,0,.35);
+      opacity:0; pointer-events:none;
+      transition:opacity .18s ease, transform .18s ease;
+    }
+    body.dark-mode #gpt-history-drawer{ background:rgba(10,20,50,.62); border-color:rgba(210,225,255,.16); }
+    #gpt-history-drawer.open{
+      opacity:1; pointer-events:auto;
+      transform:translateY(-50%) translateX(0);
+    }
+    .gpt-history-head{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px; font-weight:900;
+      border-bottom:1px solid rgba(255,255,255,.18);
+    }
+    .gpt-history-list{ max-height:55vh; overflow:auto; padding:12px; }
+    .gpt-history-item{
+      padding:10px 12px; border-radius:14px;
+      margin:8px 0; cursor:pointer; font-weight:900;
+      background:rgba(13,27,56,.30);
+      border:1px solid rgba(255,255,255,.14);
+    }
+  </style>
+
+  <!-- Your ORIGINAL app JS is massive; keep it in your file.
+       This template focuses on fixing your click bug + chat history bug. -->
+
+  <script>
+    // ===== GPT Chat Logic (FIXED TITLES) =====
+    const gptFab = document.getElementById('gpt-fab');
+    const gptWidget = document.getElementById('gptWidget');
+    const gptMessages = document.getElementById('gptMessages');
+    const gptInput = document.getElementById('gptInput');
+    const gptSend = document.getElementById('gptSend');
+
+    const gptHistoryTab = document.getElementById('gpt-history-tab');
+    const gptHistoryDrawer = document.getElementById('gpt-history-drawer');
+    const gptHistoryList = document.getElementById('gpt-history-list');
+
+    let gptSession = [];
+    const GPT_HISTORY_KEY = 'mb_gpt_history_v2';
+
+    function loadGptHistory(){
+      try { return JSON.parse(localStorage.getItem(GPT_HISTORY_KEY)) || []; }
+      catch(e){ return []; }
+    }
+    function saveGptHistory(list){
+      localStorage.setItem(GPT_HISTORY_KEY, JSON.stringify(list));
+    }
+
+    function renderHistoryList(){
+      const all = loadGptHistory();
+      gptHistoryList.innerHTML = '';
+
+      if (!all.length){
+        gptHistoryList.innerHTML = '<div style="opacity:.8;font-weight:900;text-align:center;padding:12px;">No history yet</div>';
+        return;
+      }
+
+      all.slice().reverse().forEach((conv, idxRev)=>{
+        const idx = all.length - 1 - idxRev;
+        const div = document.createElement('div');
+        div.className = 'gpt-history-item';
+        div.textContent = conv.title || ('Chat ' + (idx+1));
+
+        div.onclick = ()=>{
+          gptMessages.innerHTML = '';
+          gptSession = (conv.messages || []).map(m => ({
+            role: String(m.role).toLowerCase().trim(),
+            content: String(m.content)
+          }));
+          gptSession.forEach(m => addBubble(m.role, m.content, false));
+          closeHistoryDrawer();
+        };
+
+        gptHistoryList.appendChild(div);
+      });
+    }
+
+    function addHistoryConversation(messages){
+      const cleaned = (messages || [])
+        .filter(m => m && m.role && m.content)
+        .map(m => ({
+          role: String(m.role).toLowerCase().trim(),
+          content: String(m.content)
+        }));
+
+      if (!cleaned.length) return;
+
+      // ✅ Title = first USER message (NOT assistant “hello”)
+      const firstUser = cleaned.find(m => m.role === 'user' && m.content.trim().length);
+      const title = (firstUser ? firstUser.content : cleaned[0].content).trim().slice(0, 40);
+
+      const all = loadGptHistory();
+      all.push({ title: title || 'Chat', messages: cleaned, ts: Date.now() });
+      saveGptHistory(all.slice(-30));
+      renderHistoryList();
+    }
+
+    function closeHistoryDrawer(){ gptHistoryDrawer.classList.remove('open'); }
+    window.closeHistoryDrawer = closeHistoryDrawer;
+
+    function setChatOpen(open){
+      document.body.classList.toggle('gpt-open', open);
+      gptWidget.classList.toggle('open', open);
+
+      if (open){
+        gptSession = [];
+        gptMessages.innerHTML = '';
+        renderHistoryList();
+        setTimeout(()=> gptInput.focus(), 50);
+      } else {
+        addHistoryConversation(gptSession);
+        gptSession = [];
+        gptMessages.innerHTML = '';
+        closeHistoryDrawer();
+      }
+    }
+    window.setChatOpen = setChatOpen;
+
+    function addBubble(role, text, pushSession=true){
+      const div = document.createElement('div');
+      div.className = 'gpt-msg ' + (role === 'user' ? 'user' : 'assistant');
+      div.textContent = String(text || '');
+      gptMessages.appendChild(div);
+      gptMessages.scrollTop = gptMessages.scrollHeight;
+      if (pushSession) gptSession.push({ role, content: String(text || '') });
+    }
+
+    async function sendToGpt(){
+      const text = (gptInput.value || '').trim();
+      if (!text) return;
+
+      gptInput.value = '';
+      addBubble('user', text, true);
+
+      const typing = document.createElement('div');
+      typing.className = 'gpt-msg assistant';
+      typing.style.opacity = '0.75';
+      typing.textContent = 'Typing...';
+      gptMessages.appendChild(typing);
+      gptMessages.scrollTop = gptMessages.scrollHeight;
+
+      try{
+        const res = await fetch('/.netlify/functions/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: gptSession })
+        });
+
+        const data = await res.json().catch(()=> ({}));
+        typing.remove();
+
+        if (!res.ok){
+          addBubble('assistant', data?.error || data?.message || ('Error ' + res.status), true);
+          return;
+        }
+
+        addBubble('assistant', data?.reply || data?.text || 'No reply', true);
+
+      } catch(err){
+        typing.remove();
+        addBubble('assistant', 'Network error. Check Netlify functions + deploy.', true);
+      }
+    }
+
+    gptFab.addEventListener('click', ()=> setChatOpen(true));
+    gptSend.addEventListener('click', sendToGpt);
+    gptInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') sendToGpt(); });
+
+    gptHistoryTab.addEventListener('click', ()=>{
+      renderHistoryList();
+      gptHistoryDrawer.classList.toggle('open');
+    });
+
+    // ✅ Fix: if overlay ever gets stuck, unstick it so clicks work again
+    window.addEventListener('load', ()=>{
+      const ov = document.getElementById('overlay');
+      if (ov){
+        ov.classList.remove('active');
+        ov.style.display = 'none';
+      }
+    });
+  </script>
+
+  <script src="/pwa-bridge.js"></script>
+</body>
+</html>
