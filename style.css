@@ -303,21 +303,22 @@ body.dark-mode .filter-chip{
 }
 #mode-toggle:hover{transform:rotate(18deg) scale(1.05)}
 
-/* =========================
-   OVERLAY + MODALS (RESTORED)
-   IMPORTANT: modals MUST be above overlay
-========================= */
-
+/* ✅ OVERLAY FIX (click + z-index correct) */
 #overlay{
   position:fixed;
   inset:0;
   display:none;
-  z-index:9000;
+  z-index:5000;
   background:rgba(0,0,0,.36);
   backdrop-filter:blur(14px) saturate(130%);
   -webkit-backdrop-filter:blur(14px) saturate(130%);
 }
 #overlay.active{ display:block; }
+
+/* ✅ MODALS ABOVE OVERLAY */
+.modal{ z-index:6000; }
+.profile-menu{ z-index:6100; }
+.sleek-modal, .sleek-modal:not(.modal){ z-index:6200; }
 
 .modal{
   position:fixed;
@@ -335,7 +336,6 @@ body.dark-mode .filter-chip{
   -webkit-backdrop-filter:blur(30px) saturate(175%);
   box-shadow:0 22px 60px rgba(0,0,0,.35);
   display:none;
-  z-index:9001;
 }
 body.dark-mode .modal{
   background:var(--glass-dark);
@@ -355,7 +355,6 @@ body.dark-mode .modal{
   margin:10px 0 12px;
 }
 body.dark-mode .modal hr{background:rgba(255,255,255,.12)}
-
 .modal.sleek-modal{ display:block; }
 
 .sleek-modal:not(.modal){
@@ -364,7 +363,6 @@ body.dark-mode .modal hr{background:rgba(255,255,255,.12)}
   display:flex;
   justify-content:center;
   align-items:center;
-  z-index:9002;
   background:transparent;
 }
 .sleek-modal:not(.modal)>div{
@@ -430,7 +428,6 @@ body.dark-mode .sleek-modal:not(.modal)>div{
   box-shadow:0 0 12px rgba(42,139,255,.55);
 }
 
-/* profile menu */
 .profile-menu{
   position:fixed;
   top:72px;
@@ -444,7 +441,6 @@ body.dark-mode .sleek-modal:not(.modal)>div{
   -webkit-backdrop-filter:blur(26px) saturate(160%);
   box-shadow:0 18px 52px rgba(0,0,0,.28);
   display:none;
-  z-index:9001;
 }
 body.dark-mode .profile-menu{
   background:var(--glass-dark);
@@ -493,10 +489,7 @@ body.dark-mode .profile-menu{
 }
 .profile-row.active .profile-check{opacity:1}
 
-.profile-row-actions{
-  display:flex;
-  gap:6px;
-}
+.profile-row-actions{ display:flex; gap:6px; }
 .mini-icon,.mini-btn{
   border:none;
   border-radius:14px;
@@ -524,7 +517,6 @@ body.dark-mode .mini-icon,body.dark-mode .mini-btn{
   color:#fff;
 }
 
-/* settings modal controls */
 #settingsModal label{
   display:flex;
   justify-content:space-between;
@@ -639,11 +631,11 @@ body.light-mode .quick-row{
   border-color:rgba(10,107,255,.16);
 }
 
+.quick-row-actions{ display:flex; gap:8px; }
+
 .pin-dots{ display:flex; justify-content:center; gap:10px; }
 .pin-dot{
-  width:14px;
-  height:14px;
-  border-radius:50%;
+  width:14px;height:14px;border-radius:50%;
   background:rgba(160,180,220,.45);
 }
 .pin-dot.filled{
@@ -682,11 +674,9 @@ body[dir="rtl"]{direction:rtl;text-align:right}
 body[dir="rtl"] .calculator-box h1{text-align:center}
 body{padding-top:env(safe-area-inset-top)}
 
-/* =========================================================
-   ✅ CHAT UI (WORKING)
-========================================================= */
-
-/* Floating chat button bottom-left */
+/* =========================
+   ✅ CHAT WIDGET STYLES
+========================= */
 #gpt-fab{
   position:fixed;
   left:16px;
@@ -702,14 +692,11 @@ body{padding-top:env(safe-area-inset-top)}
   background:rgba(13,27,56,.96);
   color:#fff;
   box-shadow:0 14px 32px rgba(10,20,40,.45);
-  z-index:10001;
-  transition:transform .12s ease, box-shadow .2s ease;
+  z-index:9001;
 }
-#gpt-fab:hover{ transform:translateY(-1px); box-shadow:0 18px 40px rgba(10,20,40,.55); }
-#gpt-fab:active{ transform:translateY(0); }
+#gpt-fab:hover{ transform:translateY(-1px); }
 
-/* Chat widget container */
-.gpt-widget{
+#gptWidget{
   position:fixed;
   left:16px;
   bottom:84px;
@@ -722,30 +709,30 @@ body{padding-top:env(safe-area-inset-top)}
   backdrop-filter:blur(24px) saturate(160%);
   -webkit-backdrop-filter:blur(24px) saturate(160%);
   box-shadow:0 22px 60px rgba(0,0,0,.35);
-  z-index:10002;
 
   opacity:0;
   transform:translateY(10px);
   pointer-events:none;
   transition:opacity .18s ease, transform .18s ease;
+
+  z-index:9002;
 }
-body.dark-mode .gpt-widget{
+body.dark-mode #gptWidget{
   background:var(--glass-dark);
   border-color:var(--glass-border-dark);
   box-shadow:0 26px 70px rgba(0,0,0,.62);
 }
-.gpt-widget.open{
+#gptWidget.open{
   opacity:1;
   transform:translateY(0);
   pointer-events:auto;
 }
 
-/* Header */
 .gpt-header{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:12px 12px;
+  padding:12px;
   font-weight:900;
   background:rgba(90,160,255,.16);
   border-bottom:1px solid rgba(255,255,255,.18);
@@ -762,11 +749,13 @@ body.dark-mode .gpt-header{
   border:none;
   cursor:pointer;
   font-weight:900;
-  background:var(--brand);
+  background:#0a6bff;
   color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-/* Messages */
 .gpt-messages{
   height:calc(100% - 112px);
   overflow:auto;
@@ -775,8 +764,6 @@ body.dark-mode .gpt-header{
   flex-direction:column;
   gap:10px;
 }
-
-/* Message bubbles */
 .gpt-msg{
   max-width:86%;
   padding:10px 12px;
@@ -794,18 +781,8 @@ body.dark-mode .gpt-header{
   background:rgba(10,107,255,.16);
   border-color:rgba(10,107,255,.22);
 }
-.gpt-msg.assistant{
-  margin-right:auto;
-}
+.gpt-msg.assistant{ margin-right:auto; }
 
-/* Typing */
-.gpt-typing{
-  font-weight:900;
-  opacity:.7;
-  padding:6px 10px;
-}
-
-/* Input bar */
 .gpt-inputbar{
   display:flex;
   gap:8px;
@@ -824,7 +801,6 @@ body.dark-mode .gpt-header{
 body.dark-mode .gpt-inputbar input{
   border-color:rgba(210,225,255,.14);
   background:rgba(16,28,58,.55);
-  color:#fff;
 }
 .gpt-inputbar button{
   padding:12px 14px;
@@ -837,28 +813,31 @@ body.dark-mode .gpt-inputbar input{
   box-shadow:0 10px 26px rgba(10,20,40,.25);
 }
 
-/* =========================================================
-   ✅ HISTORY TAB (ONLY WHEN CHAT OPEN)
-========================================================= */
+/* ✅ History ONLY shows when chat open */
+#gpt-history-tab,
+#gpt-history-drawer{ display:none; }
+body.gpt-open #gpt-history-tab,
+body.gpt-open #gpt-history-drawer{ display:block; }
 
+/* ✅ History tab on RIGHT */
 #gpt-history-tab{
   position:fixed;
-  left:0;
   top:50%;
+  right:0;
   transform:translateY(-50%);
   padding:10px 12px;
-  border-radius:0 14px 14px 0;
   font-weight:900;
   cursor:pointer;
   background:rgba(13,27,56,.96);
   color:#fff;
-  z-index:10003;
+  border-radius:14px 0 0 14px;
+  z-index:9003;
 }
 #gpt-history-drawer{
   position:fixed;
-  left:12px;
   top:50%;
-  transform:translateY(-50%) translateX(-18px);
+  right:12px;
+  transform:translateY(-50%) translateX(18px);
   width:min(320px,86vw);
   max-height:70vh;
   overflow:hidden;
@@ -868,10 +847,10 @@ body.dark-mode .gpt-inputbar input{
   backdrop-filter:blur(24px) saturate(160%);
   -webkit-backdrop-filter:blur(24px) saturate(160%);
   box-shadow:0 22px 60px rgba(0,0,0,.35);
-  z-index:10004;
   opacity:0;
   pointer-events:none;
   transition:opacity .18s ease, transform .18s ease;
+  z-index:9004;
 }
 body.dark-mode #gpt-history-drawer{
   background:var(--glass-dark);
@@ -904,26 +883,3 @@ body.dark-mode #gpt-history-drawer{
   background:rgba(13,27,56,.30);
   border:1px solid rgba(255,255,255,.14);
 }
-
-/* hidden unless chat is open */
-#gpt-history-tab,
-#gpt-history-drawer{
-  display:none;
-}
-body.gpt-open #gpt-history-tab,
-body.gpt-open #gpt-history-drawer{
-  display:block;
-}
-
-/* =========================================================
-   ✅ FINAL Z-INDEX GUARANTEE
-   overlay blur UNDER modals, chat above everything
-========================================================= */
-
-#overlay{ z-index:9000 !important; }
-.modal, .profile-menu{ z-index:9001 !important; }
-.sleek-modal, .sleek-modal:not(.modal){ z-index:9002 !important; }
-#gpt-fab{ z-index:10001 !important; }
-.gpt-widget{ z-index:10002 !important; }
-#gpt-history-tab{ z-index:10003 !important; }
-#gpt-history-drawer{ z-index:10004 !important; }
