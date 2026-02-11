@@ -12,6 +12,174 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="stylesheet" href="style.css" />
+
+  <!-- ✅ Chat widget styles (so you DON'T need to edit style.css) -->
+  <style>
+    /* =========================
+       CHAT WIDGET
+    ========================== */
+    #gpt-fab{
+      position:fixed;
+      right:16px;
+      top:50%;
+      transform:translateY(-50%);
+      width:52px;
+      height:52px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      z-index:10001;
+      font-size:22px;
+      font-weight:900;
+      background:rgba(13,27,56,.96);
+      color:#fff;
+      box-shadow:0 14px 32px rgba(10,20,40,.45);
+      transition:transform .12s ease, box-shadow .2s ease, background .2s ease;
+    }
+    #gpt-fab:hover{
+      transform:translateY(-50%) scale(1.06);
+      box-shadow:0 0 18px rgba(90,160,255,.55);
+    }
+
+    .gpt-widget{
+      position:fixed;
+      right:16px;
+      top:50%;
+      transform:translateY(-50%) translateX(16px);
+      width:min(360px,92vw);
+      height:min(520px,78vh);
+      border-radius:18px;
+      overflow:hidden;
+      z-index:10002;
+      opacity:0;
+      pointer-events:none;
+
+      background:var(--glass-light, rgba(255,255,255,.40));
+      border:1px solid var(--glass-border-light, rgba(255,255,255,.60));
+      backdrop-filter:blur(28px) saturate(165%);
+      -webkit-backdrop-filter:blur(28px) saturate(165%);
+      box-shadow:0 22px 60px rgba(0,0,0,.35);
+
+      transition:opacity .18s ease, transform .18s ease;
+    }
+    body.dark-mode .gpt-widget{
+      background:var(--glass-dark, rgba(10,20,50,.62));
+      border-color:var(--glass-border-dark, rgba(210,225,255,.16));
+      color:#fff;
+      box-shadow:0 26px 70px rgba(0,0,0,.62);
+    }
+    .gpt-widget.open{
+      opacity:1;
+      pointer-events:auto;
+      transform:translateY(-50%) translateX(0);
+    }
+
+    .gpt-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 12px;
+      font-weight:900;
+      background:rgba(90,160,255,.16);
+      border-bottom:1px solid rgba(255,255,255,.22);
+    }
+    body.dark-mode .gpt-header{
+      background:rgba(22,36,76,.55);
+      border-bottom:1px solid rgba(210,225,255,.12);
+    }
+    .gpt-title{font-size:14px; opacity:.95;}
+    .gpt-close{
+      width:34px;
+      height:34px;
+      border-radius:50%;
+      border:none;
+      background:#0a6bff;
+      color:#fff;
+      font-weight:900;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:transform .12s ease, box-shadow .2s ease;
+    }
+    .gpt-close:hover{
+      transform:scale(1.07);
+      box-shadow:0 0 12px rgba(42,139,255,.55);
+    }
+
+    .gpt-messages{
+      height:calc(100% - 112px);
+      overflow:auto;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .gpt-msg{
+      max-width:85%;
+      padding:10px 12px;
+      border-radius:16px;
+      font-weight:800;
+      line-height:1.25;
+      white-space:pre-wrap;
+    }
+    .gpt-msg.user{
+      margin-left:auto;
+      background:rgba(10,107,255,.16);
+      border:1px solid rgba(10,107,255,.22);
+    }
+    .gpt-msg.assistant{
+      margin-right:auto;
+      background:rgba(13,27,56,.28);
+      border:1px solid rgba(255,255,255,.14);
+    }
+    body.dark-mode .gpt-msg.assistant{
+      background:rgba(22,36,76,.45);
+      border-color:rgba(210,225,255,.12);
+    }
+
+    .gpt-typing{
+      font-weight:900;
+      opacity:.75;
+      padding:6px 8px;
+    }
+
+    .gpt-inputbar{
+      display:flex;
+      gap:8px;
+      padding:12px;
+      border-top:1px solid rgba(255,255,255,.22);
+      background:rgba(255,255,255,.10);
+    }
+    body.dark-mode .gpt-inputbar{
+      border-top:1px solid rgba(210,225,255,.12);
+      background:rgba(0,0,0,.10);
+    }
+    #gpt-input{
+      flex:1;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.26);
+      background:rgba(90,160,255,.10);
+      color:inherit;
+      outline:none;
+      font-weight:800;
+    }
+    body.dark-mode #gpt-input{
+      background:rgba(16,28,58,.55);
+      border-color:rgba(210,225,255,.14);
+    }
+    #gpt-send{
+      padding:12px 14px;
+      border-radius:14px;
+      border:none;
+      font-weight:900;
+      cursor:pointer;
+      background:rgba(13,27,56,.96);
+      color:#fff;
+      box-shadow:0 10px 26px rgba(10,20,40,.35);
+    }
+  </style>
 </head>
 
 <body class="light-mode">
@@ -130,6 +298,23 @@
     <button class="btn" onclick="addCategory()">Add Category</button>
 
     <button class="btn" onclick="closeSettings()">Close</button>
+  </div>
+
+  <!-- ✅ NEW: ChatGPT floating button + popup -->
+  <button id="gpt-fab" aria-label="Open Chat">💬</button>
+
+  <div id="gpt-widget" class="gpt-widget" aria-hidden="true">
+    <div class="gpt-header">
+      <div class="gpt-title">Chat</div>
+      <button id="gpt-close" class="gpt-close" aria-label="Close">✖</button>
+    </div>
+
+    <div id="gpt-messages" class="gpt-messages"></div>
+
+    <form id="gpt-form" class="gpt-inputbar">
+      <input id="gpt-input" type="text" placeholder="Type a message…" autocomplete="off" />
+      <button id="gpt-send" type="submit">Send</button>
+    </form>
   </div>
 
   <script>
@@ -581,7 +766,6 @@ function openSettings(){
 function closeSettings(force=false){
   settingsModal.style.display='none';
   if (!force) persistCurrentProfile();
-  // ✅ immediate unblur
   if (force || profileMenu.style.display!=='block') hideOverlay();
 }
 function applyFeatureVisibility(){
@@ -589,7 +773,6 @@ function applyFeatureVisibility(){
   resetBtn.style.display = featureSettings.reset ? '' : 'none';
 }
 function renderSettings(){
-  // toggles
   const tClear = document.getElementById('toggleClear');
   const tReset = document.getElementById('toggleReset');
 
@@ -599,7 +782,6 @@ function renderSettings(){
   tClear.onchange = ()=>{ featureSettings.clear = tClear.checked; persistCurrentProfile(); applyFeatureVisibility(); };
   tReset.onchange = ()=>{ featureSettings.reset = tReset.checked; persistCurrentProfile(); applyFeatureVisibility(); };
 
-  // currency
   const curSel = document.getElementById('currencySelect');
   curSel.value = getCurrency();
   curSel.onchange = ()=>{
@@ -608,7 +790,6 @@ function renderSettings(){
     updateBudget(); renderHistory(); renderAmountInput();
   };
 
-  // cents mode
   const centsToggle = document.getElementById('toggleCentsMode');
   centsToggle.checked = centsMode;
   centsToggle.onchange = ()=>{
@@ -619,7 +800,6 @@ function renderSettings(){
     persistCurrentProfile();
   };
 
-  // categories
   const list = document.getElementById('categoryList');
   list.innerHTML='';
   categories.forEach((c,i)=>{
@@ -633,7 +813,6 @@ function renderSettings(){
   renderQuickEditor();
 }
 
-/* categories add/remove */
 function addCategory(){
   const inp=document.getElementById('newCategoryInput');
   const val=(inp.value||'').trim();
@@ -649,7 +828,6 @@ function removeCategory(i){
   renderSettings();
 }
 
-/* language */
 function toggleLanguage(){
   lang = (lang==='en') ? 'ar' : 'en';
   localStorage.setItem('lang', lang);
@@ -711,7 +889,6 @@ function openProfileMenu(){
 }
 function closeProfileMenu(force=false){
   profileMenu.style.display='none';
-  // ✅ immediate unblur
   if (force || settingsModal.style.display!=='block') hideOverlay();
 }
 function toggleProfileMenu(){
@@ -742,7 +919,7 @@ function renderProfileMenu(){
     `;
 
     wrap.querySelector('.profile-row').onclick = ()=>{
-      if (p.id === active) return; // don't close if same
+      if (p.id === active) return;
       haptic('success');
       switchProfile(p.id);
       closeProfileMenu(true);
@@ -854,8 +1031,6 @@ function deleteProfileById(id){
 
 /* =========================
    HISTORY RENDER (filtered)
-   NOTE: edit-history + filters + charts + pin + subtract
-   are completed in PART 2.2
 ========================= */
 function toYMD(ts){
   const d = new Date(ts);
@@ -941,8 +1116,7 @@ function resetBudget(){
 document.getElementById('toggleHistoryBtn').addEventListener('click', openFullHistory);
 
 /* =========================
-   INIT (PARTIAL)
-   Full init completes in PART 2.2
+   INIT
 ========================= */
 function init(){
   migrateOldDataIntoDefaultProfileIfNeeded();
@@ -964,6 +1138,7 @@ function init(){
   renderHistory();
 }
 init();
+
 /* =========================
    SUBTRACT (CATEGORY PICK)
 ========================= */
@@ -1019,10 +1194,7 @@ function doSubtract(cat){
    EDIT HISTORY (CHANGE AMOUNT/TYPE/CATEGORY)
 ========================= */
 function openEditHistory(filteredIndex){
-  // filteredIndex refers to the currently rendered filtered list (history.slice().reverse() filtered)
   const list = history.slice().reverse();
-
-  // rebuild same filtered list to find correct item
   const from = historyFilters.from || '';
   const to = historyFilters.to || '';
 
@@ -1118,11 +1290,9 @@ function saveEditedHistory(realIndex){
 
   if (!amount || amount <= 0) return;
 
-  // reverse old
   if (oldItem.kind === 'add') budget -= Number(oldItem.value||0);
   else budget += Number(oldItem.value||0);
 
-  // apply new
   const ts = oldItem.timestamp;
   const newItem = { id: oldItem.id || uid(), timestamp: ts, kind, value: amount };
 
@@ -1752,6 +1922,118 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 hideOverlay();
+
+/* =========================
+   ✅ NEW: CHAT WIDGET LOGIC (calls Netlify function)
+   IMPORTANT: this does NOT use your API key in the browser.
+   It calls: /.netlify/functions/chat
+========================= */
+(function(){
+  const gptFab = document.getElementById('gpt-fab');
+  const gptWidget = document.getElementById('gpt-widget');
+  const gptClose = document.getElementById('gpt-close');
+  const gptMessages = document.getElementById('gpt-messages');
+  const gptForm = document.getElementById('gpt-form');
+  const gptInput = document.getElementById('gpt-input');
+
+  let gptConversation = JSON.parse(localStorage.getItem('mb_gpt_convo') || '[]');
+
+  function gptSetOpen(open){
+    gptWidget.classList.toggle('open', open);
+    gptWidget.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (open){
+      showOverlay();
+      setTimeout(()=> gptInput.focus(), 50);
+    } else {
+      hideOverlay();
+    }
+  }
+
+  function gptAddMessage(role, text){
+    const row = document.createElement('div');
+    row.className = 'gpt-msg ' + (role === 'user' ? 'user' : 'assistant');
+    row.textContent = text;
+    gptMessages.appendChild(row);
+    gptMessages.scrollTop = gptMessages.scrollHeight;
+  }
+
+  function gptRender(){
+    gptMessages.innerHTML = '';
+    gptConversation.forEach(m => gptAddMessage(m.role, m.content));
+  }
+
+  function gptSave(){
+    localStorage.setItem('mb_gpt_convo', JSON.stringify(gptConversation.slice(-40)));
+  }
+
+  gptFab.addEventListener('click', ()=>{
+    gptRender();
+    gptSetOpen(true);
+  });
+
+  gptClose.addEventListener('click', ()=> gptSetOpen(false));
+
+  // Make overlay click close chat too, without breaking your existing overlayCloseAll
+  const _overlayCloseAllChat = overlayCloseAll;
+  overlayCloseAll = function(){
+    try{ gptSetOpen(false); }catch(e){}
+    _overlayCloseAllChat();
+  };
+
+  // ESC closes chat too
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') gptSetOpen(false);
+  });
+
+  gptForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const text = (gptInput.value || '').trim();
+    if (!text) return;
+
+    gptInput.value = '';
+    gptAddMessage('user', text);
+    gptConversation.push({ role:'user', content:text });
+    gptSave();
+
+    const typing = document.createElement('div');
+    typing.className = 'gpt-typing';
+    typing.textContent = (lang==='ar') ? '...يكتب' : 'Typing…';
+    gptMessages.appendChild(typing);
+    gptMessages.scrollTop = gptMessages.scrollHeight;
+
+    try{
+      const res = await fetch('/.netlify/functions/chat', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role:'system', content:'You are a helpful assistant for the Money Budgeter app.' },
+            ...gptConversation
+          ]
+        })
+      });
+
+      const data = await res.json();
+      typing.remove();
+
+      if (!res.ok){
+        gptAddMessage('assistant', data?.error || `Error (${res.status})`);
+        return;
+      }
+
+      const reply = data?.reply || 'No reply.';
+      gptAddMessage('assistant', reply);
+      gptConversation.push({ role:'assistant', content: reply });
+      gptSave();
+    }catch(err){
+      typing.remove();
+      gptAddMessage('assistant', (lang==='ar')
+        ? 'خطأ شبكة. تأكد من Netlify function + env vars.'
+        : 'Network error. Check Netlify function + env vars.'
+      );
+    }
+  });
+})();
   </script>
 
   <script src="/pwa-bridge.js"></script>
