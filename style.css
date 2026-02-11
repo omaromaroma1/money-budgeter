@@ -21,7 +21,7 @@ body{
   --txt-inv:#fff;
 }
 
-/* ========== BACKGROUND ========== */
+/* ================= BACKGROUND ================= */
 
 body.light-mode{
   background:linear-gradient(150deg,#f6f9ff 0%,#ecf2ff 60%,#e8f0ff 100%);
@@ -37,7 +37,7 @@ body.dark-mode{
   color:#fff;
 }
 
-/* ========== MAIN APP BOX ========== */
+/* ================= MAIN APP BOX ================= */
 
 .calculator-box{
   width:360px;
@@ -76,7 +76,7 @@ body.light-mode h1{color:var(--brand)}
   font-weight:900;
 }
 
-/* ========== PROFILE + SETTINGS ICON ========== */
+/* ================= PROFILE + SETTINGS ================= */
 
 #profile-badge{
   position:absolute;
@@ -123,7 +123,7 @@ body.dark-mode #profile-badge{
   filter:drop-shadow(0 0 10px rgba(90,160,255,.55));
 }
 
-/* ========== INPUT ========== */
+/* ================= INPUT ================= */
 
 #input-display{
   width:100%;
@@ -136,7 +136,7 @@ body.dark-mode #profile-badge{
   outline:none;
 }
 
-/* ========== QUICK BAR ========== */
+/* ================= QUICK BAR ================= */
 
 .quick-bar{
   display:flex;
@@ -156,13 +156,8 @@ body.dark-mode #profile-badge{
   box-shadow:0 8px 20px rgba(10,20,40,.30);
   transition:transform .12s ease, box-shadow .2s ease, background .2s ease;
 }
-.quick-btn:hover{
-  transform:translateY(-1px);
-  background:rgba(18,36,78,1);
-  box-shadow:0 12px 26px rgba(10,20,40,.45);
-}
 
-/* ========== NUMPAD ========== */
+/* ================= NUMPAD ================= */
 
 .numpad{
   display:flex;
@@ -184,7 +179,7 @@ body.dark-mode #profile-badge{
   box-shadow:0 8px 22px rgba(10,20,40,.35);
 }
 
-/* ========== ACTION BUTTONS ========== */
+/* ================= ACTION BUTTONS ================= */
 
 .buttons{
   display:flex;
@@ -205,7 +200,7 @@ body.dark-mode #profile-badge{
   box-shadow:0 10px 26px rgba(10,20,40,.40);
 }
 
-/* ========== HISTORY PANEL ========== */
+/* ================= HISTORY PANEL ================= */
 
 .history-header{
   display:flex;
@@ -223,17 +218,15 @@ body.dark-mode #profile-badge{
   border:1px solid var(--glass-border-light);
 }
 
-/* =========================
-   CHAT BUTTON + WIDGET (NEW)
-========================= */
+/* ================= CHAT BUTTON + WIDGET ================= */
 
-/* FIX TEXT OVERFLOW */
+/* Fix long text overflow */
 .gpt-msg{
   overflow-wrap:anywhere;
   word-break:break-word;
 }
 
-/* MOVE CHAT BUTTON TO BOTTOM LEFT */
+/* Move chat button to bottom-left */
 #gpt-fab{
   position:fixed;
   left:16px;
@@ -250,7 +243,7 @@ body.dark-mode #profile-badge{
   box-shadow:0 14px 32px rgba(10,20,40,.45);
 }
 
-/* CHAT WIDGET POSITION */
+/* Chat widget position (bottom-left) */
 .gpt-widget{
   position:fixed;
   left:16px;
@@ -273,7 +266,7 @@ body.dark-mode #profile-badge{
   pointer-events:auto;
 }
 
-/* CHAT HEADER */
+/* Chat header */
 .gpt-header{
   display:flex;
   align-items:center;
@@ -283,7 +276,7 @@ body.dark-mode #profile-badge{
   background:rgba(90,160,255,.16);
 }
 
-/* CHAT MESSAGES */
+/* Messages */
 .gpt-messages{
   height:calc(100% - 112px);
   overflow:auto;
@@ -293,21 +286,21 @@ body.dark-mode #profile-badge{
   gap:10px;
 }
 
-/* USER MESSAGE */
+/* User message */
 .gpt-msg.user{
   margin-left:auto;
   background:rgba(10,107,255,.16);
   border:1px solid rgba(10,107,255,.22);
 }
 
-/* BOT MESSAGE */
+/* Bot message */
 .gpt-msg.assistant{
   margin-right:auto;
   background:rgba(13,27,56,.28);
   border:1px solid rgba(255,255,255,.14);
 }
 
-/* CHAT INPUT BAR */
+/* Input bar */
 .gpt-inputbar{
   display:flex;
   gap:8px;
@@ -315,9 +308,7 @@ body.dark-mode #profile-badge{
   border-top:1px solid rgba(255,255,255,.22);
 }
 
-/* =========================
-   LEFT HISTORY TAB (NEW)
-========================= */
+/* ================= LEFT HISTORY (ONLY WHEN CHAT OPEN) ================= */
 
 #gpt-history-tab{
   position:fixed;
@@ -333,7 +324,7 @@ body.dark-mode #profile-badge{
   color:#fff;
 }
 
-/* HISTORY DRAWER */
+/* Drawer */
 #gpt-history-drawer{
   position:fixed;
   left:12px;
@@ -358,36 +349,47 @@ body.dark-mode #profile-badge{
   transform:translateY(-50%) translateX(0);
 }
 
-.gpt-history-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px;
-  font-weight:900;
-  background:rgba(90,160,255,.16);
+/* Hide history unless chat is open */
+#gpt-history-tab,
+#gpt-history-drawer{
+  display:none;
+}
+body.gpt-open #gpt-history-tab,
+body.gpt-open #gpt-history-drawer{
+  display:block;
 }
 
-.gpt-history-list{
-  max-height:calc(70vh - 110px);
-  overflow:auto;
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
+/* ================= OVERLAY + Z-INDEX FIX ================= */
+
+#overlay{
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:9000 !important;
+  background:rgba(0,0,0,.36);
+  backdrop-filter:blur(14px) saturate(130%);
+}
+#overlay.active{
+  display:block;
 }
 
-.gpt-history-item{
-  padding:10px 12px;
-  border-radius:14px;
-  font-weight:900;
-  cursor:pointer;
-  background:rgba(10,107,255,.08);
-  border:1px solid rgba(10,107,255,.16);
+/* Make popups clickable (above overlay) */
+.modal,
+.profile-menu{
+  z-index:9001 !important;
+}
+.sleek-modal,
+.sleek-modal:not(.modal){
+  z-index:9002 !important;
 }
 
-/* =========================
-   MODE TOGGLE + OVERLAY
-========================= */
+/* Keep chat always on top */
+#gpt-fab{ z-index:10001 !important; }
+.gpt-widget{ z-index:10002 !important; }
+#gpt-history-tab{ z-index:10003 !important; }
+#gpt-history-drawer{ z-index:10003 !important; }
+
+/* ================= MODE TOGGLE ================= */
 
 #mode-toggle{
   position:fixed;
@@ -397,16 +399,4 @@ body.dark-mode #profile-badge{
   cursor:pointer;
   user-select:none;
   z-index:60;
-}
-
-#overlay{
-  position:fixed;
-  inset:0;
-  display:none;
-  z-index:9998;
-  background:rgba(0,0,0,.36);
-  backdrop-filter:blur(14px) saturate(130%);
-}
-#overlay.active{
-  display:block;
 }
