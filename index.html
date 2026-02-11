@@ -12,43 +12,15 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="stylesheet" href="style.css" />
-
-  <!-- ✅ Fix click-block + z-index + history right -->
-  <style>
-    #overlay{ pointer-events:none; }
-    #overlay.active{ pointer-events:auto; }
-
-    #overlay{ z-index: 9000 !important; }
-    .modal, .profile-menu{ z-index: 9001 !important; }
-    .sleek-modal, .sleek-modal:not(.modal){ z-index: 9002 !important; }
-
-    #gpt-fab{ z-index: 20001 !important; }
-    #gptWidget{ z-index: 20002 !important; }
-    #gpt-history-tab{ z-index: 20003 !important; }
-    #gpt-history-drawer{ z-index: 20004 !important; }
-
-    #gpt-history-tab, #gpt-history-drawer{ display:none; }
-    body.gpt-open #gpt-history-tab, body.gpt-open #gpt-history-drawer{ display:block; }
-
-    #gpt-history-tab{
-      left:auto !important;
-      right:0 !important;
-      border-radius:14px 0 0 14px !important;
-    }
-    #gpt-history-drawer{
-      left:auto !important;
-      right:12px !important;
-      transform:translateY(-50%) translateX(18px) !important;
-    }
-    #gpt-history-drawer.open{
-      transform:translateY(-50%) translateX(0) !important;
-    }
-  </style>
 </head>
 
 <body class="light-mode">
   <div class="calculator-box">
+
+    <!-- ✅ Profile badge (top-left) -->
     <div id="profile-badge" onclick="toggleProfileMenu()" aria-label="Profiles">🙂</div>
+
+    <!-- ✅ Settings icon (top-right) -->
     <div id="settings-icon" onclick="openSettings()">⚙️</div>
 
     <h1 id="title">Money Budgeter</h1>
@@ -56,6 +28,8 @@
     <div id="budget">Budget: $0.00</div>
 
     <input id="input-display" placeholder="0.00" readonly />
+
+    <!-- ✅ Adjustable quick amounts bar -->
     <div id="quickBar" class="quick-bar"></div>
 
     <div class="numpad">
@@ -79,6 +53,7 @@
       <button id="subtractBtn" onclick="openSubtract()">Subtract</button>
       <button id="clearBtn" onclick="clearHistory()">Clear History</button>
       <button id="resetBtn" onclick="resetBudget()">Reset</button>
+
       <button id="chartsBtn" onclick="openCharts()">📈 Charts</button>
       <button id="filterBtn" onclick="openFilters()">🔎 Filter</button>
     </div>
@@ -91,9 +66,13 @@
     <div id="history"></div>
   </div>
 
+  <!-- Theme toggle -->
   <div id="mode-toggle" onclick="toggleMode()">🌙</div>
+
+  <!-- ✅ Overlay -->
   <div id="overlay"></div>
 
+  <!-- ✅ Profile menu -->
   <div id="profileMenu" class="profile-menu" role="dialog" aria-modal="true">
     <div class="profile-menu-head">
       <div id="profilesTitle" style="font-weight:900;">Profiles</div>
@@ -103,6 +82,7 @@
     <button class="btn" onclick="addProfile()">➕ Add</button>
   </div>
 
+  <!-- ✅ Settings modal -->
   <div id="settingsModal" class="modal" aria-modal="true" role="dialog">
     <h3 id="settingsTitle">Settings</h3>
     <hr />
@@ -148,8 +128,10 @@
     <button class="btn" onclick="closeSettings()">Close</button>
   </div>
 
-  <!-- GPT UI -->
+  <!-- ✅ Chat button bottom-left -->
   <button id="gpt-fab" type="button" aria-label="Chat">💬</button>
+
+  <!-- ✅ History on RIGHT (only visible when chat open) -->
   <div id="gpt-history-tab" role="button" aria-label="Chat history">History</div>
 
   <div id="gpt-history-drawer" aria-label="Chat history drawer">
@@ -160,7 +142,7 @@
     <div class="gpt-history-list" id="gpt-history-list"></div>
   </div>
 
-  <div id="gptWidget" class="gpt-widget">
+  <div id="gptWidget">
     <div class="gpt-header">
       <div class="gpt-title">ChatGPT</div>
       <button class="gpt-close" type="button" onclick="setChatOpen(false)">✖</button>
@@ -172,279 +154,973 @@
     </div>
   </div>
 
-  <!-- Minimal chat CSS (so it works even if style.css misses it) -->
-  <style>
-    #gpt-fab{
-      position:fixed; left:16px; bottom:16px;
-      width:54px; height:54px; border-radius:999px; border:none;
-      cursor:pointer; user-select:none; font-size:22px; font-weight:900;
-      background:rgba(13,27,56,.96); color:#fff;
-      box-shadow:0 14px 32px rgba(10,20,40,.45);
-    }
-    #gptWidget{
-      position:fixed; left:16px; bottom:84px;
-      width:min(360px,92vw); height:min(520px,78vh);
-      border-radius:18px; overflow:hidden;
-      background:rgba(255,255,255,.40);
-      border:1px solid rgba(255,255,255,.60);
-      backdrop-filter:blur(24px) saturate(160%);
-      -webkit-backdrop-filter:blur(24px) saturate(160%);
-      box-shadow:0 22px 60px rgba(0,0,0,.35);
-      opacity:0; transform:translateY(10px);
-      pointer-events:none;
-      transition:opacity .18s ease, transform .18s ease;
-    }
-    body.dark-mode #gptWidget{
-      background:rgba(10,20,50,.62);
-      border-color:rgba(210,225,255,.16);
-      box-shadow:0 26px 70px rgba(0,0,0,.62);
-    }
-    #gptWidget.open{ opacity:1; transform:translateY(0); pointer-events:auto; }
-
-    .gpt-header{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:12px; font-weight:900;
-      background:rgba(90,160,255,.16);
-      border-bottom:1px solid rgba(255,255,255,.18);
-    }
-    body.dark-mode .gpt-header{ background:rgba(22,36,76,.55); border-bottom:1px solid rgba(210,225,255,.10); }
-    .gpt-close{
-      width:34px; height:34px; border-radius:50%; border:none;
-      cursor:pointer; font-weight:900; background:#0a6bff; color:#fff;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .gpt-messages{
-      height:calc(100% - 112px);
-      overflow:auto; padding:12px;
-      display:flex; flex-direction:column; gap:10px;
-    }
-    .gpt-msg{
-      max-width:86%;
-      padding:10px 12px; border-radius:14px;
-      font-weight:800; line-height:1.35;
-      white-space:pre-wrap;
-      overflow-wrap:anywhere; word-break:break-word;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(13,27,56,.28);
-    }
-    .gpt-msg.user{ margin-left:auto; background:rgba(10,107,255,.16); border-color:rgba(10,107,255,.22); }
-    .gpt-msg.assistant{ margin-right:auto; }
-    .gpt-inputbar{
-      display:flex; gap:8px; padding:12px;
-      border-top:1px solid rgba(255,255,255,.18);
-    }
-    .gpt-inputbar input{
-      flex:1; padding:12px 12px; border-radius:14px;
-      border:1px solid rgba(255,255,255,.28);
-      background:rgba(90,160,255,.10);
-      color:inherit; outline:none;
-    }
-    body.dark-mode .gpt-inputbar input{ border-color:rgba(210,225,255,.14); background:rgba(16,28,58,.55); }
-    .gpt-inputbar button{
-      padding:12px 14px; border:none; border-radius:14px;
-      cursor:pointer; font-weight:900;
-      background:rgba(13,27,56,.96); color:#fff;
-      box-shadow:0 10px 26px rgba(10,20,40,.25);
-    }
-
-    #gpt-history-tab{
-      position:fixed; top:50%;
-      transform:translateY(-50%);
-      padding:10px 12px;
-      font-weight:900; cursor:pointer;
-      background:rgba(13,27,56,.96); color:#fff;
-    }
-    #gpt-history-drawer{
-      position:fixed; top:50%;
-      transform:translateY(-50%) translateX(18px);
-      width:min(320px,86vw); max-height:70vh;
-      overflow:hidden; border-radius:18px;
-      background:rgba(255,255,255,.40);
-      border:1px solid rgba(255,255,255,.60);
-      backdrop-filter:blur(24px) saturate(160%);
-      -webkit-backdrop-filter:blur(24px) saturate(160%);
-      box-shadow:0 22px 60px rgba(0,0,0,.35);
-      opacity:0; pointer-events:none;
-      transition:opacity .18s ease, transform .18s ease;
-    }
-    body.dark-mode #gpt-history-drawer{ background:rgba(10,20,50,.62); border-color:rgba(210,225,255,.16); }
-    #gpt-history-drawer.open{
-      opacity:1; pointer-events:auto;
-      transform:translateY(-50%) translateX(0);
-    }
-    .gpt-history-head{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:12px; font-weight:900;
-      border-bottom:1px solid rgba(255,255,255,.18);
-    }
-    .gpt-history-list{ max-height:55vh; overflow:auto; padding:12px; }
-    .gpt-history-item{
-      padding:10px 12px; border-radius:14px;
-      margin:8px 0; cursor:pointer; font-weight:900;
-      background:rgba(13,27,56,.30);
-      border:1px solid rgba(255,255,255,.14);
-    }
-  </style>
-
-  <!-- Your ORIGINAL app JS is massive; keep it in your file.
-       This template focuses on fixing your click bug + chat history bug. -->
-
   <script>
-    // ===== GPT Chat Logic (FIXED TITLES) =====
-    const gptFab = document.getElementById('gpt-fab');
-    const gptWidget = document.getElementById('gptWidget');
-    const gptMessages = document.getElementById('gptMessages');
-    const gptInput = document.getElementById('gptInput');
-    const gptSend = document.getElementById('gptSend');
+/* =========================
+   HAPTICS (ALL BUTTONS)
+========================= */
+function haptic(type='tap'){
+  if (!('vibrate' in navigator)) return;
+  try{
+    if (type === 'success') navigator.vibrate([12, 30, 12]);
+    else if (type === 'error') navigator.vibrate([30, 20, 30]);
+    else navigator.vibrate(10);
+  }catch(e){}
+}
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if (btn && !btn.disabled) haptic('tap');
+}, true);
 
-    const gptHistoryTab = document.getElementById('gpt-history-tab');
-    const gptHistoryDrawer = document.getElementById('gpt-history-drawer');
-    const gptHistoryList = document.getElementById('gpt-history-list');
+/* =========================
+   DOM
+========================= */
+const overlay = document.getElementById('overlay');
+const settingsModal = document.getElementById('settingsModal');
+const profileMenu = document.getElementById('profileMenu');
+const profileListEl = document.getElementById('profileList');
+const profileBadge = document.getElementById('profile-badge');
 
-    let gptSession = [];
-    const GPT_HISTORY_KEY = 'mb_gpt_history_v2';
+const historyEl = document.getElementById('history');
+const inputEl = document.getElementById('input-display');
+const decimalBtn = document.getElementById('decimalBtn');
+const backspaceBtn = document.getElementById('backspaceBtn');
+const zeroBtn = document.getElementById('zeroBtn');
 
-    function loadGptHistory(){
-      try { return JSON.parse(localStorage.getItem(GPT_HISTORY_KEY)) || []; }
-      catch(e){ return []; }
+const clearBtn = document.getElementById('clearBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+/* =========================
+   OVERLAY (FIXED)
+   - overlay is BELOW modals
+   - overlay ONLY blocks background clicks (intended)
+   - modals always above overlay because of z-index in CSS
+========================= */
+function showOverlay(){
+  overlay.classList.add('active');
+}
+function hideOverlay(){
+  overlay.classList.remove('active');
+}
+function overlayCloseAll(){
+  closeSettings(true);
+  closeProfileMenu(true);
+  closeTempModals(true);
+  closeFilters(true);
+  closeCharts(true);
+  closePinModals(true);
+  hideOverlay();
+}
+overlay.addEventListener('click', overlayCloseAll);
+
+/* ✅ SAFETY: if overlay gets stuck, unstick it automatically */
+setInterval(()=>{
+  // If overlay is active but NO modal/menu is open, hide it.
+  const anyModalOpen =
+    (settingsModal && settingsModal.style.display === 'block') ||
+    (profileMenu && profileMenu.style.display === 'block') ||
+    document.querySelector('.sleek-modal') ||
+    document.getElementById('filtersModal') ||
+    document.getElementById('chartsModal') ||
+    document.querySelector('.pin-modal');
+
+  if (overlay.classList.contains('active') && !anyModalOpen){
+    hideOverlay();
+  }
+}, 300);
+
+/* =========================
+   HELPERS
+========================= */
+function uid(){
+  return 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+/* =========================
+   PER-PROFILE STORAGE
+========================= */
+const PROFILES_KEY = 'mb_profiles';
+const ACTIVE_PROFILE_KEY = 'mb_activeProfileId';
+function profileStoreKey(id){ return `mb_profile_${id}`; }
+
+function loadProfiles(){ return JSON.parse(localStorage.getItem(PROFILES_KEY)) || []; }
+function saveProfiles(list){ localStorage.setItem(PROFILES_KEY, JSON.stringify(list)); }
+function getActiveProfileId(){ return localStorage.getItem(ACTIVE_PROFILE_KEY); }
+function setActiveProfileId(id){ localStorage.setItem(ACTIVE_PROFILE_KEY, id); }
+
+function defaultProfileData(){
+  return {
+    budget: 0,
+    history: [],
+    categories: ['Leisure','Transportation','Food','Groceries','Others','Games','Friends'],
+    featureSettings: { clear:true, reset:true },
+    centsMode: true,
+    currency: 'USD',
+    lang: (localStorage.getItem('lang') || 'en'),
+    quickAmounts: [-1,-3,-5,-10,-20],
+    pinEnabled: false,
+    pinHash: '',
+    historyFilters: { mode:'all', category:'all', from:'', to:'' }
+  };
+}
+function readProfileData(id){
+  const raw = localStorage.getItem(profileStoreKey(id));
+  if (!raw) return defaultProfileData();
+  try{ return { ...defaultProfileData(), ...JSON.parse(raw) }; }
+  catch(e){ return defaultProfileData(); }
+}
+function writeProfileData(id, data){
+  localStorage.setItem(profileStoreKey(id), JSON.stringify(data));
+}
+
+/* One-time migration */
+function migrateOldDataIntoDefaultProfileIfNeeded(){
+  const existing = loadProfiles();
+  if (existing.length) return;
+
+  const id = uid();
+  saveProfiles([{ id, name:'Main', emoji:'💰' }]);
+  setActiveProfileId(id);
+
+  const oldBudget = parseFloat(localStorage.getItem('budget')) || 0;
+  const oldHistory = JSON.parse(localStorage.getItem('history')) || [];
+  const oldCategories = JSON.parse(localStorage.getItem('categories')) || defaultProfileData().categories;
+  const oldFeatureSettings = JSON.parse(localStorage.getItem('featureSettings')) || defaultProfileData().featureSettings;
+  const oldCentsMode = (localStorage.getItem('centsMode') ?? 'true') === 'true';
+  const oldCurrency = localStorage.getItem('currency') || 'USD';
+  const oldLang = localStorage.getItem('lang') || 'en';
+
+  writeProfileData(id, {
+    ...defaultProfileData(),
+    budget: oldBudget,
+    history: oldHistory,
+    categories: oldCategories,
+    featureSettings: oldFeatureSettings,
+    centsMode: oldCentsMode,
+    currency: oldCurrency,
+    lang: oldLang
+  });
+}
+
+/* =========================
+   LIVE STATE (ACTIVE PROFILE)
+========================= */
+let categories = [];
+let featureSettings = { clear:true, reset:true };
+let lang = 'en';
+let budget = 0;
+let history = [];
+let centsMode = true;
+let quickAmounts = [-1,-3,-5,-10,-20];
+let pinEnabled = false;
+let pinHash = '';
+let historyFilters = { mode:'all', category:'all', from:'', to:'' };
+
+function getCurrency(){ return localStorage.getItem('currency') || 'USD'; }
+function setCurrency(cur){ localStorage.setItem('currency', cur); }
+
+function persistCurrentProfile(){
+  const id = getActiveProfileId();
+  if (!id) return;
+  writeProfileData(id, {
+    budget, history, categories, featureSettings,
+    centsMode, currency: getCurrency(), lang, quickAmounts,
+    pinEnabled, pinHash, historyFilters
+  });
+}
+function loadActiveProfileIntoApp(){
+  const id = getActiveProfileId();
+  if (!id) return;
+  const data = readProfileData(id);
+
+  budget = Number(data.budget || 0);
+  history = Array.isArray(data.history) ? data.history : [];
+  categories = Array.isArray(data.categories) ? data.categories : defaultProfileData().categories;
+  featureSettings = data.featureSettings || defaultProfileData().featureSettings;
+  centsMode = !!data.centsMode;
+  quickAmounts = Array.isArray(data.quickAmounts) ? data.quickAmounts : [-1,-3,-5,-10,-20];
+  pinEnabled = !!data.pinEnabled;
+  pinHash = String(data.pinHash || '');
+  historyFilters = data.historyFilters || { mode:'all', category:'all', from:'', to:'' };
+
+  setCurrency(data.currency || 'USD');
+  lang = data.lang || (localStorage.getItem('lang') || 'en');
+  localStorage.setItem('lang', lang);
+}
+
+/* =========================
+   MONEY FORMAT
+========================= */
+function formatMoney(value){
+  const currency = getCurrency();
+  try{
+    return new Intl.NumberFormat(undefined, { style:'currency', currency }).format(value);
+  } catch(e){
+    return `$${Number(value||0).toFixed(2)}`;
+  }
+}
+
+/* =========================
+   CLOCK
+========================= */
+function tickClock(){
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    '🕒 ' + n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+setInterval(tickClock,1000); tickClock();
+
+/* =========================
+   THEME
+========================= */
+function toggleMode(){
+  const dark = document.body.classList.contains('dark-mode');
+  document.body.classList.toggle('dark-mode', !dark);
+  document.body.classList.toggle('light-mode', dark);
+  localStorage.setItem('theme', dark ? 'light' : 'dark');
+  document.getElementById('mode-toggle').textContent = dark ? '🌙' : '☀️';
+}
+(function initTheme(){
+  if (localStorage.getItem('theme')==='dark'){
+    document.body.classList.add('dark-mode');
+    document.getElementById('mode-toggle').textContent='☀️';
+  } else {
+    document.body.classList.add('light-mode');
+    document.getElementById('mode-toggle').textContent='🌙';
+  }
+})();
+
+/* =========================
+   INPUT (SMART CENTS + DECIMAL)
+========================= */
+let amountDigits = '';
+let amountRaw = '';
+function moneyFromDigits(d){
+  if (!d) return 0;
+  const cents = parseInt(d,10);
+  if (isNaN(cents)) return 0;
+  return cents/100;
+}
+function moneyFromRaw(s){
+  if (!s) return 0;
+  const v = parseFloat(s);
+  if (isNaN(v)) return 0;
+  return v;
+}
+function getCurrentAmount(){ return centsMode ? moneyFromDigits(amountDigits) : moneyFromRaw(amountRaw); }
+function renderAmountInput(){ inputEl.value = formatMoney(getCurrentAmount()); }
+function clearInput(){ amountDigits=''; amountRaw=''; renderAmountInput(); }
+function syncDecimalButton(){ decimalBtn.style.display = centsMode ? 'none' : ''; }
+
+function appendNumber(n){
+  if (!/^\d$/.test(n)) return;
+  if (centsMode){
+    if (amountDigits.length >= 12) return;
+    if (amountDigits === '0') amountDigits = '';
+    amountDigits += n;
+  } else {
+    if (amountRaw.length >= 14) return;
+    if (amountRaw.includes('.')){
+      const parts = amountRaw.split('.');
+      const dec = parts[1] ?? '';
+      if (dec.length >= 2) return;
     }
-    function saveGptHistory(list){
-      localStorage.setItem(GPT_HISTORY_KEY, JSON.stringify(list));
+    amountRaw += n;
+  }
+  renderAmountInput();
+}
+function appendDecimal(){
+  if (centsMode) return;
+  if (!amountRaw) amountRaw='0';
+  if (amountRaw.includes('.')) return;
+  amountRaw += '.';
+  renderAmountInput();
+}
+function backspace(){
+  if (centsMode) amountDigits = amountDigits.slice(0,-1);
+  else amountRaw = amountRaw.slice(0,-1);
+  renderAmountInput();
+}
+
+/* long-press backspace = clear */
+(function initBackspaceLongPress(){
+  let t=null;
+  const start=()=>{ t=setTimeout(()=>{ clearInput(); haptic('success'); }, 420); };
+  const end=()=>{ if(t){ clearTimeout(t); t=null; } };
+  backspaceBtn.addEventListener('touchstart', start, {passive:true});
+  backspaceBtn.addEventListener('touchend', end, {passive:true});
+  backspaceBtn.addEventListener('mousedown', start);
+  backspaceBtn.addEventListener('mouseup', end);
+  backspaceBtn.addEventListener('mouseleave', end);
+})();
+
+/* hold zero = 00 */
+(function initZeroHold(){
+  let t=null;
+  const start=()=>{ t=setTimeout(()=>{ appendNumber('0'); appendNumber('0'); haptic('success'); }, 420); };
+  const end=()=>{ if(t){ clearTimeout(t); t=null; } };
+  zeroBtn.addEventListener('touchstart', start, {passive:true});
+  zeroBtn.addEventListener('touchend', end, {passive:true});
+  zeroBtn.addEventListener('mousedown', start);
+  zeroBtn.addEventListener('mouseup', end);
+  zeroBtn.addEventListener('mouseleave', end);
+})();
+
+/* =========================
+   QUICK AMOUNTS (PER PROFILE)
+========================= */
+function renderQuickBar(){
+  const bar = document.getElementById('quickBar');
+  if (!bar) return;
+  const addLabel = (lang==='ar') ? '➕ إضافة' : '➕ Add';
+  bar.innerHTML = `
+    <button class="quick-btn" onclick="quickApplyFixed(+1)">${addLabel}</button>
+    ${quickAmounts.map(a=>{
+      const sign = a < 0 ? '−' : '+';
+      return `<button class="quick-btn" onclick="quickApplyFixed(${a})">${sign}${Math.abs(a)}</button>`;
+    }).join('')}
+  `;
+}
+function quickApplyFixed(delta){
+  const v = Math.abs(Number(delta||0));
+  if (!v) return;
+  const ts = new Date().toLocaleString();
+  if (delta < 0){
+    budget -= v;
+    history.push({ id: uid(), kind:'subtract', category:'Others', type:'Subtract (Quick)', value:v, timestamp:ts });
+  } else {
+    budget += v;
+    history.push({ id: uid(), kind:'add', type:'Add (Quick)', value:v, timestamp:ts });
+  }
+  saveBudget(); renderHistory(); clearInput(); haptic('success');
+}
+function renderQuickEditor(){
+  const holder = document.getElementById('quickEditor');
+  if (!holder) return;
+  holder.innerHTML = quickAmounts.map((a,i)=>`
+    <div class="quick-row">
+      <span>${a<0?'−':'+'}${Math.abs(a)}</span>
+      <div class="quick-row-actions">
+        <button class="mini-btn" onclick="editQuickAmount(${i})">✏️</button>
+        <button class="mini-btn danger" onclick="removeQuickAmount(${i})">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+function addQuickAmount(){
+  const inp = document.getElementById('quickNew');
+  const n = Number(inp.value);
+  if (!n || !isFinite(n)) return;
+  const val = -Math.abs(n);
+  if (quickAmounts.includes(val)) { inp.value=''; return; }
+  quickAmounts.push(val);
+  inp.value='';
+  persistCurrentProfile();
+  renderQuickEditor();
+  renderQuickBar();
+  haptic('success');
+}
+function removeQuickAmount(i){
+  quickAmounts.splice(i,1);
+  persistCurrentProfile();
+  renderQuickEditor();
+  renderQuickBar();
+  haptic('success');
+}
+function editQuickAmount(i){
+  const raw = prompt(lang==='ar' ? 'اكتب الرقم (مثال: -5 أو 5)' : 'Enter number (ex: -5 or 5)', String(quickAmounts[i]));
+  if (raw === null) return;
+  const n = Number(raw);
+  if (!n || !isFinite(n)) return;
+  quickAmounts[i] = n;
+  persistCurrentProfile();
+  renderQuickEditor();
+  renderQuickBar();
+  haptic('success');
+}
+
+/* =========================
+   BUDGET / HISTORY CORE
+========================= */
+function saveBudget(){
+  persistCurrentProfile();
+  updateBudget();
+}
+function updateBudget(){
+  document.getElementById('budget').textContent = `Budget: ${formatMoney(budget)}`;
+}
+function submitAmount(type){
+  const v = getCurrentAmount();
+  if (!v) return;
+  const ts = new Date().toLocaleString();
+  if (type === 'add'){
+    budget += v;
+    history.push({ id: uid(), kind:'add', type:'Add', value:v, timestamp:ts });
+    saveBudget(); renderHistory(); clearInput();
+  }
+}
+
+/* TEMP MODALS container closer */
+function closeTempModals(force=false){
+  document.querySelectorAll('.sleek-modal').forEach(el=>el.remove());
+  if (!force) return;
+}
+function closeFilters(force=false){ const el=document.getElementById('filtersModal'); if(el) el.remove(); if(force){} }
+function closeCharts(force=false){ const el=document.getElementById('chartsModal'); if(el) el.remove(); if(force){} }
+function closePinModals(force=false){ document.querySelectorAll('.pin-modal').forEach(el=>el.remove()); if(force){} }
+
+/* =========================
+   SETTINGS (FULL + FIXED CLOSE)
+========================= */
+function openSettings(){
+  renderSettings();
+  settingsModal.style.display='block';
+  showOverlay();
+}
+function closeSettings(force=false){
+  settingsModal.style.display='none';
+  if (!force) persistCurrentProfile();
+  if (force || profileMenu.style.display!=='block') hideOverlay();
+}
+function applyFeatureVisibility(){
+  clearBtn.style.display = featureSettings.clear ? '' : 'none';
+  resetBtn.style.display = featureSettings.reset ? '' : 'none';
+}
+function renderSettings(){
+  const tClear = document.getElementById('toggleClear');
+  const tReset = document.getElementById('toggleReset');
+
+  tClear.checked = !!featureSettings.clear;
+  tReset.checked = !!featureSettings.reset;
+
+  tClear.onchange = ()=>{ featureSettings.clear = tClear.checked; persistCurrentProfile(); applyFeatureVisibility(); };
+  tReset.onchange = ()=>{ featureSettings.reset = tReset.checked; persistCurrentProfile(); applyFeatureVisibility(); };
+
+  const curSel = document.getElementById('currencySelect');
+  curSel.value = getCurrency();
+  curSel.onchange = ()=>{
+    setCurrency(curSel.value);
+    persistCurrentProfile();
+    updateBudget(); renderHistory(); renderAmountInput();
+  };
+
+  const centsToggle = document.getElementById('toggleCentsMode');
+  centsToggle.checked = centsMode;
+  centsToggle.onchange = ()=>{
+    centsMode = centsToggle.checked;
+    localStorage.setItem('centsMode', centsMode ? 'true' : 'false');
+    clearInput();
+    syncDecimalButton();
+    persistCurrentProfile();
+  };
+
+  const list = document.getElementById('categoryList');
+  list.innerHTML='';
+  categories.forEach((c,i)=>{
+    const row=document.createElement('div');
+    row.innerHTML = `${escapeHtml(c)}
+      <button style="float:right;background:#ef4444;color:#fff;border:none;border-radius:8px;padding:2px 8px;font-weight:800"
+        onclick="removeCategory(${i})">X</button>`;
+    list.appendChild(row);
+  });
+
+  renderQuickEditor();
+}
+
+/* categories add/remove */
+function addCategory(){
+  const inp=document.getElementById('newCategoryInput');
+  const val=(inp.value||'').trim();
+  if(!val || categories.includes(val)) return;
+  categories.push(val);
+  inp.value='';
+  persistCurrentProfile();
+  renderSettings();
+}
+function removeCategory(i){
+  categories.splice(i,1);
+  persistCurrentProfile();
+  renderSettings();
+}
+
+/* language */
+function toggleLanguage(){
+  lang = (lang==='en') ? 'ar' : 'en';
+  localStorage.setItem('lang', lang);
+  persistCurrentProfile();
+  applyLanguage();
+  renderQuickBar();
+  renderProfileMenu();
+}
+function applyLanguage(){
+  const en={
+    title:'Money Budgeter', settingsTitle:'Settings', languageLabel:'Language:',
+    featuresLabel:'Features:', categoryLabel:'Custom Categories:',
+    toggleClearLbl:'Show Clear History', toggleResetLbl:'Show Reset',
+    langBtn:'Switch to Arabic 🇸🇦', historyLabel:'History', currencyLabel:'Currency:',
+    toggleCentsLbl:'Smart cents input', profilesTitle:'Profiles',
+    quickLabel:'Quick Amounts:', pinLabel:'PIN Lock:'
+  };
+  const ar={
+    title:'مدير الميزانية', settingsTitle:'الإعدادات', languageLabel:'اللغة:',
+    featuresLabel:'الخصائص:', categoryLabel:'الفئات المخصصة:',
+    toggleClearLbl:'عرض مسح السجل', toggleResetLbl:'عرض إعادة الضبط',
+    langBtn:'التبديل إلى الإنجليزية 🇬🇧', historyLabel:'السجل', currencyLabel:'العملة:',
+    toggleCentsLbl:'إدخال ذكي (سنتات)', profilesTitle:'البروفايلات',
+    quickLabel:'المبالغ السريعة:', pinLabel:'قفل PIN:'
+  };
+  const t=(lang==='ar')?ar:en;
+
+  document.getElementById('title').textContent=t.title;
+  document.getElementById('settingsTitle').textContent=t.settingsTitle;
+  document.getElementById('languageLabel').textContent=t.languageLabel;
+  document.getElementById('featuresLabel').textContent=t.featuresLabel;
+  document.getElementById('categoryLabel').textContent=t.categoryLabel;
+  document.getElementById('toggleClearLbl').textContent=t.toggleClearLbl;
+  document.getElementById('toggleResetLbl').textContent=t.toggleResetLbl;
+  document.getElementById('langBtn').textContent=t.langBtn;
+  document.getElementById('historyLabel').textContent=t.historyLabel;
+  document.getElementById('currencyLabel').textContent=t.currencyLabel;
+  document.getElementById('toggleCentsLbl').textContent=t.toggleCentsLbl;
+  document.getElementById('profilesTitle').textContent=t.profilesTitle;
+  document.getElementById('quickLabel').textContent=t.quickLabel;
+  document.getElementById('pinLabel').textContent=t.pinLabel;
+
+  document.body.setAttribute('dir', (lang==='ar')?'rtl':'ltr');
+}
+
+/* =========================
+   PROFILES
+========================= */
+function renderProfileBadge(){
+  const profiles = loadProfiles();
+  const id = getActiveProfileId();
+  const p = profiles.find(x=>x.id===id) || profiles[0];
+  profileBadge.textContent = p?.emoji || '🙂';
+}
+function openProfileMenu(){
+  renderProfileMenu();
+  profileMenu.style.display='block';
+  showOverlay();
+}
+function closeProfileMenu(force=false){
+  profileMenu.style.display='none';
+  if (force || settingsModal.style.display!=='block') hideOverlay();
+}
+function toggleProfileMenu(){
+  const open = profileMenu.style.display === 'block';
+  if (open) closeProfileMenu();
+  else openProfileMenu();
+}
+function renderProfileMenu(){
+  const profiles = loadProfiles();
+  const active = getActiveProfileId();
+  profileListEl.innerHTML = '';
+
+  profiles.forEach(p=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'profile-row-wrap';
+
+    wrap.innerHTML = `
+      <button class="profile-row ${p.id===active?'active':''}" type="button">
+        <span class="profile-emoji">${escapeHtml(p.emoji||'🙂')}</span>
+        <span class="profile-name">${escapeHtml(p.name||'Profile')}</span>
+        <span class="profile-check">✓</span>
+      </button>
+      <div class="profile-row-actions">
+        <button class="mini-icon" onclick="event.stopPropagation(); editProfile('${p.id}')">✏️</button>
+        <button class="mini-icon danger" onclick="event.stopPropagation(); deleteProfileById('${p.id}')">🗑</button>
+      </div>
+    `;
+
+    wrap.querySelector('.profile-row').onclick = ()=>{
+      if (p.id === active) return;
+      haptic('success');
+      switchProfile(p.id);
+      closeProfileMenu(true);
+    };
+
+    const delBtn = wrap.querySelector('.mini-icon.danger');
+    if (profiles.length <= 1){
+      delBtn.disabled = true;
+      delBtn.style.opacity = '0.35';
+      delBtn.style.cursor = 'not-allowed';
     }
 
-    function renderHistoryList(){
-      const all = loadGptHistory();
-      gptHistoryList.innerHTML = '';
+    profileListEl.appendChild(wrap);
+  });
+}
+function switchProfile(id){
+  const profiles = loadProfiles();
+  if (!profiles.some(p=>p.id===id)) return;
 
-      if (!all.length){
-        gptHistoryList.innerHTML = '<div style="opacity:.8;font-weight:900;text-align:center;padding:12px;">No history yet</div>';
-        return;
-      }
+  persistCurrentProfile();
+  setActiveProfileId(id);
+  loadActiveProfileIntoApp();
 
-      all.slice().reverse().forEach((conv, idxRev)=>{
-        const idx = all.length - 1 - idxRev;
-        const div = document.createElement('div');
-        div.className = 'gpt-history-item';
-        div.textContent = conv.title || ('Chat ' + (idx+1));
+  clearInput();
+  syncDecimalButton();
+  applyLanguage();
+  applyFeatureVisibility();
+  renderProfileBadge();
+  renderQuickBar();
+  renderQuickEditor();
+  updateBudget();
+  renderHistory();
+}
+function addProfile(){
+  const name = prompt(lang==='ar' ? 'اسم البروفايل؟' : 'Profile name?');
+  if (!name) return;
+  const emoji = prompt(lang==='ar' ? 'إيموجي؟' : 'Emoji?', '🛍️');
+  if (!emoji) return;
 
-        div.onclick = ()=>{
-          gptMessages.innerHTML = '';
-          gptSession = (conv.messages || []).map(m => ({
-            role: String(m.role).toLowerCase().trim(),
-            content: String(m.content)
-          }));
-          gptSession.forEach(m => addBubble(m.role, m.content, false));
-          closeHistoryDrawer();
-        };
+  persistCurrentProfile();
 
-        gptHistoryList.appendChild(div);
-      });
+  const profiles = loadProfiles();
+  const id = uid();
+  profiles.push({ id, name: name.trim(), emoji: emoji.trim() });
+  saveProfiles(profiles);
+
+  writeProfileData(id, defaultProfileData());
+  switchProfile(id);
+}
+function editProfile(id){
+  const profiles = loadProfiles();
+  const p = profiles.find(x=>x.id===id);
+  if (!p) return;
+
+  const newName = prompt(lang==='ar' ? 'الاسم الجديد:' : 'New name:', p.name || '');
+  if (!newName) return;
+
+  const newEmoji = prompt(lang==='ar' ? 'الإيموجي الجديد:' : 'New emoji:', p.emoji || '🙂');
+  if (!newEmoji) return;
+
+  p.name = newName.trim();
+  p.emoji = newEmoji.trim();
+  saveProfiles(profiles);
+
+  renderProfileBadge();
+  renderProfileMenu();
+}
+function deleteProfileById(id){
+  const profiles = loadProfiles();
+  if (profiles.length <= 1){
+    alert(lang==='ar' ? 'لا يمكن حذف آخر بروفايل.' : "You can't delete the last profile.");
+    haptic('error');
+    return;
+  }
+  const p = profiles.find(x=>x.id===id);
+  const ok = confirm(
+    (lang==='ar' ? `حذف "${p?.name||''}"؟` : `Delete "${p?.name||''}"?`) +
+    (lang==='ar' ? '\nسيتم حذف الميزانية والسجل.' : '\nThis removes its budget and history.')
+  );
+  if (!ok) return;
+
+  localStorage.removeItem(profileStoreKey(id));
+
+  const active = getActiveProfileId();
+  const remaining = profiles.filter(x=>x.id!==id);
+  saveProfiles(remaining);
+
+  if (id === active){
+    setActiveProfileId(remaining[0].id);
+    loadActiveProfileIntoApp();
+
+    clearInput();
+    syncDecimalButton();
+    applyLanguage();
+    applyFeatureVisibility();
+    renderProfileBadge();
+    renderQuickBar();
+    renderQuickEditor();
+    updateBudget();
+    renderHistory();
+  }
+
+  renderProfileMenu();
+}
+
+/* =========================
+   HISTORY RENDER
+========================= */
+function toYMD(ts){
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const da = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${da}`;
+}
+function renderHistory(){
+  historyEl.innerHTML = '';
+
+  const list = history.slice().reverse();
+  const from = historyFilters.from || '';
+  const to = historyFilters.to || '';
+
+  const filtered = list.filter(it=>{
+    const kind = it.kind || (String(it.type||'').toLowerCase().startsWith('add') ? 'add' : 'subtract');
+
+    if (historyFilters.mode === 'add' && kind !== 'add') return false;
+    if (historyFilters.mode === 'subtract' && kind !== 'subtract') return false;
+
+    if (historyFilters.category !== 'all'){
+      if (kind !== 'subtract') return false;
+      const cat = it.category || (String(it.type||'').match(/^Subtract \((.+)\)$/)?.[1] || '');
+      if (cat !== historyFilters.category) return false;
     }
 
-    function addHistoryConversation(messages){
-      const cleaned = (messages || [])
-        .filter(m => m && m.role && m.content)
-        .map(m => ({
-          role: String(m.role).toLowerCase().trim(),
-          content: String(m.content)
-        }));
-
-      if (!cleaned.length) return;
-
-      // ✅ Title = first USER message (NOT assistant “hello”)
-      const firstUser = cleaned.find(m => m.role === 'user' && m.content.trim().length);
-      const title = (firstUser ? firstUser.content : cleaned[0].content).trim().slice(0, 40);
-
-      const all = loadGptHistory();
-      all.push({ title: title || 'Chat', messages: cleaned, ts: Date.now() });
-      saveGptHistory(all.slice(-30));
-      renderHistoryList();
+    if (from || to){
+      const ymd = toYMD(it.timestamp);
+      if (!ymd) return false;
+      if (from && ymd < from) return false;
+      if (to && ymd > to) return false;
     }
+    return true;
+  });
 
-    function closeHistoryDrawer(){ gptHistoryDrawer.classList.remove('open'); }
-    window.closeHistoryDrawer = closeHistoryDrawer;
+  const isActive =
+    historyFilters.mode !== 'all' ||
+    historyFilters.category !== 'all' ||
+    !!historyFilters.from ||
+    !!historyFilters.to;
 
-    function setChatOpen(open){
-      document.body.classList.toggle('gpt-open', open);
-      gptWidget.classList.toggle('open', open);
+  if (isActive){
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip';
+    chip.textContent = (lang==='ar') ? 'الفلاتر مفعلة' : 'Filters active';
+    chip.onclick = openFilters;
+    historyEl.appendChild(chip);
+  }
 
-      if (open){
-        gptSession = [];
-        gptMessages.innerHTML = '';
-        renderHistoryList();
-        setTimeout(()=> gptInput.focus(), 50);
-      } else {
-        addHistoryConversation(gptSession);
-        gptSession = [];
-        gptMessages.innerHTML = '';
-        closeHistoryDrawer();
-      }
-    }
-    window.setChatOpen = setChatOpen;
+  filtered.forEach((it, idx)=>{
+    const d=document.createElement('div');
+    d.className='history-item';
+    d.textContent = `${it.timestamp} — ${it.type}: ${formatMoney(it.value)}`;
+    d.onclick = ()=> openEditHistory(idx);
+    historyEl.appendChild(d);
+  });
 
-    function addBubble(role, text, pushSession=true){
-      const div = document.createElement('div');
-      div.className = 'gpt-msg ' + (role === 'user' ? 'user' : 'assistant');
-      div.textContent = String(text || '');
-      gptMessages.appendChild(div);
-      gptMessages.scrollTop = gptMessages.scrollHeight;
-      if (pushSession) gptSession.push({ role, content: String(text || '') });
-    }
+  if (!filtered.length){
+    const empty = document.createElement('div');
+    empty.className = 'history-empty';
+    empty.textContent = (lang==='ar') ? 'لا توجد نتائج' : 'No results';
+    historyEl.appendChild(empty);
+  }
+}
+function clearHistory(){
+  history = [];
+  saveBudget();
+  renderHistory();
+  haptic('success');
+}
+function resetBudget(){
+  budget = 0;
+  saveBudget();
+  haptic('success');
+}
 
-    async function sendToGpt(){
-      const text = (gptInput.value || '').trim();
-      if (!text) return;
+/* =========================
+   INIT
+========================= */
+function init(){
+  migrateOldDataIntoDefaultProfileIfNeeded();
 
-      gptInput.value = '';
-      addBubble('user', text, true);
+  const profiles = loadProfiles();
+  if (!getActiveProfileId() && profiles.length){
+    setActiveProfileId(profiles[0].id);
+  }
+  loadActiveProfileIntoApp();
 
-      const typing = document.createElement('div');
-      typing.className = 'gpt-msg assistant';
-      typing.style.opacity = '0.75';
-      typing.textContent = 'Typing...';
-      gptMessages.appendChild(typing);
-      gptMessages.scrollTop = gptMessages.scrollHeight;
+  applyLanguage();
+  renderProfileBadge();
+  renderQuickBar();
+  renderQuickEditor();
+  applyFeatureVisibility();
+  syncDecimalButton();
+  renderAmountInput();
+  updateBudget();
+  renderHistory();
+}
+init();
 
-      try{
-        const res = await fetch('/.netlify/functions/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: gptSession })
-        });
+/* =========================
+   NOTE:
+   Your full subtract/edit/filters/charts/pin code can stay exactly as you already had it.
+   (Your earlier message contains those functions.)
+========================= */
 
-        const data = await res.json().catch(()=> ({}));
-        typing.remove();
+/* =========================
+   GPT CHAT (FIXED + NO DUPLICATES)
+========================= */
+const gptFab = document.getElementById('gpt-fab');
+const gptWidget = document.getElementById('gptWidget');
+const gptMessages = document.getElementById('gptMessages');
+const gptInput = document.getElementById('gptInput');
+const gptSend = document.getElementById('gptSend');
 
-        if (!res.ok){
-          addBubble('assistant', data?.error || data?.message || ('Error ' + res.status), true);
-          return;
-        }
+const gptHistoryTab = document.getElementById('gpt-history-tab');
+const gptHistoryDrawer = document.getElementById('gpt-history-drawer');
+const gptHistoryList = document.getElementById('gpt-history-list');
 
-        addBubble('assistant', data?.reply || data?.text || 'No reply', true);
+let gptSession = [];
+const GPT_HISTORY_KEY = 'mb_gpt_history_v2';
+let gptLastSavedSig = '';
 
-      } catch(err){
-        typing.remove();
-        addBubble('assistant', 'Network error. Check Netlify functions + deploy.', true);
-      }
-    }
+function loadGptHistory(){
+  try { return JSON.parse(localStorage.getItem(GPT_HISTORY_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveGptHistory(list){
+  localStorage.setItem(GPT_HISTORY_KEY, JSON.stringify(list));
+}
+function closeHistoryDrawer(){
+  gptHistoryDrawer.classList.remove('open');
+}
+window.closeHistoryDrawer = closeHistoryDrawer;
 
-    gptFab.addEventListener('click', ()=> setChatOpen(true));
-    gptSend.addEventListener('click', sendToGpt);
-    gptInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') sendToGpt(); });
+function renderHistoryList(){
+  const all = loadGptHistory();
+  gptHistoryList.innerHTML = '';
 
-    gptHistoryTab.addEventListener('click', ()=>{
-      renderHistoryList();
-      gptHistoryDrawer.classList.toggle('open');
+  if (!all.length){
+    gptHistoryList.innerHTML =
+      '<div style="opacity:.8;font-weight:900;text-align:center;padding:12px;">No history yet</div>';
+    return;
+  }
+
+  all.slice().reverse().forEach((conv, idxRev)=>{
+    const idx = all.length - 1 - idxRev;
+
+    const div = document.createElement('div');
+    div.className = 'gpt-history-item';
+    div.textContent = conv.title || ('Chat ' + (idx+1));
+
+    div.onclick = ()=>{
+      gptMessages.innerHTML = '';
+      gptSession = (conv.messages || []).map(m => ({
+        role: String(m.role).toLowerCase().trim(),
+        content: String(m.content)
+      }));
+      gptSession.forEach(m => addBubble(m.role, m.content, false));
+      closeHistoryDrawer();
+    };
+
+    gptHistoryList.appendChild(div);
+  });
+}
+
+function addHistoryConversation(messages){
+  const cleaned = (messages || [])
+    .filter(m => m && m.role && m.content)
+    .map(m => ({
+      role: String(m.role).toLowerCase().trim(),
+      content: String(m.content)
+    }));
+
+  const firstUser = cleaned.find(m => m.role === 'user' && m.content.trim().length);
+  if (!firstUser) return;
+
+  const title = firstUser.content.trim().slice(0, 40);
+
+  const all = loadGptHistory();
+  all.push({ title: title || 'Chat', messages: cleaned, ts: Date.now() });
+
+  saveGptHistory(all.slice(-30));
+  renderHistoryList();
+}
+
+function sessionSignature(session){
+  const clean = (session||[]).filter(m=>m && m.role && m.content);
+  const lastUser = [...clean].reverse().find(m=>String(m.role).toLowerCase().trim()==='user');
+  return (clean.length + '|' + (lastUser ? String(lastUser.content).trim().slice(0,80) : ''));
+}
+
+function setChatOpen(open){
+  document.body.classList.toggle('gpt-open', open);
+  gptWidget.classList.toggle('open', open);
+
+  if (open){
+    gptSession = [];
+    gptMessages.innerHTML = '';
+    renderHistoryList();
+    closeHistoryDrawer();
+    setTimeout(()=> gptInput.focus(), 50);
+    return;
+  }
+
+  const hasUser = (gptSession||[]).some(m => String(m.role).toLowerCase().trim()==='user' && String(m.content||'').trim());
+  const sig = sessionSignature(gptSession);
+
+  if (hasUser && sig !== gptLastSavedSig){
+    addHistoryConversation(gptSession);
+    gptLastSavedSig = sig;
+  }
+
+  gptSession = [];
+  gptMessages.innerHTML = '';
+  closeHistoryDrawer();
+}
+window.setChatOpen = setChatOpen;
+
+function addBubble(role, text, pushSession=true){
+  const div = document.createElement('div');
+  div.className = 'gpt-msg ' + (role === 'user' ? 'user' : 'assistant');
+  div.textContent = String(text || '');
+  gptMessages.appendChild(div);
+  gptMessages.scrollTop = gptMessages.scrollHeight;
+  if (pushSession) gptSession.push({ role, content: String(text || '') });
+}
+
+async function sendToGpt(){
+  const text = (gptInput.value || '').trim();
+  if (!text) return;
+
+  gptInput.value = '';
+  addBubble('user', text, true);
+
+  const typing = document.createElement('div');
+  typing.className = 'gpt-msg assistant';
+  typing.style.opacity = '0.75';
+  typing.textContent = 'Typing...';
+  gptMessages.appendChild(typing);
+  gptMessages.scrollTop = gptMessages.scrollHeight;
+
+  try{
+    const res = await fetch('/.netlify/functions/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: gptSession })
     });
 
-    // ✅ Fix: if overlay ever gets stuck, unstick it so clicks work again
-    window.addEventListener('load', ()=>{
-      const ov = document.getElementById('overlay');
-      if (ov){
-        ov.classList.remove('active');
-        ov.style.display = 'none';
-      }
-    });
+    const data = await res.json().catch(()=> ({}));
+    typing.remove();
+
+    if (!res.ok){
+      addBubble('assistant', data?.error || data?.message || ('Error ' + res.status), true);
+      return;
+    }
+
+    addBubble('assistant', data?.reply || data?.text || 'No reply', true);
+
+  } catch(err){
+    typing.remove();
+    addBubble('assistant', 'Network error. Check Netlify functions + deploy.', true);
+  }
+}
+
+gptFab.addEventListener('click', ()=> setChatOpen(true));
+gptSend.addEventListener('click', sendToGpt);
+gptInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') sendToGpt(); });
+
+gptHistoryTab.addEventListener('click', ()=>{
+  renderHistoryList();
+  gptHistoryDrawer.classList.toggle('open');
+});
   </script>
 
   <script src="/pwa-bridge.js"></script>
