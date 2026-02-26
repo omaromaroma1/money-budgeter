@@ -54,6 +54,7 @@
       <button id="clearBtn" onclick="clearHistory()">Clear History</button>
       <button id="resetBtn" onclick="resetBudget()">Reset</button>
 
+      <!-- ✅ these WILL work after Part 2.2 -->
       <button id="chartsBtn" onclick="openCharts()">📈 Charts</button>
       <button id="filterBtn" onclick="openFilters()">🔎 Filter</button>
     </div>
@@ -130,6 +131,1629 @@
 
     <button class="btn" onclick="closeSettings()">Close</button>
   </div>
+
+  <script>
+/* =========================
+   HAPTICS (ALL BUTTONS)
+========================= */
+function haptic(type='tap'){
+  if (!('vibrate' in navigator)) return;
+  try{
+    if (type === 'success') navigator.vibrate([12, 30, 12]);
+    else if (type === 'error') navigator.vibrate([30, 20, 30]);
+    else navigator.vibrate(10);
+  }catch(e){}
+}
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if (btn && !btn.disabled) haptic('tap');
+}, true);
+
+/* =========================
+   DOM
+========================= */
+const overlay = document.getElementById('overlay');
+const settingsModal = document.getElementById('settingsModal');
+const profileMenu = document.getElementById('profileMenu');
+const profileListEl = document.getElementById('profileList');
+const profileBadge = document.getElementById('profile-badge');
+
+const historyEl = document.getElementById('history');
+const inputEl = document.getElementById('input-display');
+const decimalBtn = document.getElementById('decimalBtn');
+const backspaceBtn = document.getElementById('backspaceBtn');
+const zeroBtn = document.getElementById('zeroBtn');
+
+const clearBtn = document.getElementById('clearBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+/* =========================
+   CLICK-SAFE OVERLAY
+========================= */
+function showOverlay(){
+  overlay.classList.add('active');
+}
+function hideOverlay(){
+  overlay.classList.remove('active');
+}
+function overlayCloseAll(){
+  closeSettings(true);
+  closeProfileMenu(true);
+  closeTempModals(true);
+  closeFilters(true);
+  closeCharts(true);
+  closePinModals(true);
+  hideOverlay(); 
+}
+overlay.addEventListener('click', overlayCloseAll);
+
+/* =========================
+   HELPERS
+========================= */
+function uid(){
+  return 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+/* =========================
+   PER-PROFILE STORAGE
+========================= */
+const PROFILES_KEY = 'mb_profiles';
+const ACTIVE_PROFILE_KEY = 'mb_activeProfileId';
+function profileStoreKey(id){ return `mb_profile_${id}`; }
+
+function loadProfiles(){
+  return JSON.parse(localStorage.getItem(PROFILES_KEY)) || [];
+}
+function saveProfiles(list){
+  localStorage.setItem(PROFILES_KEY, JSON.stringify(list));
+}
+function getActiveProfileId(){
+  return localStorage.getItem(ACTIVE_PROFILE_KEY);
+}
+function setActiveProfileId(id){
+  localStorage.setItem(ACTIVE_PROFILE_KEY, id);
+}
+
+function defaultProfileData(){
+  return {
+    budget: 0,
+    history: [],
+    categories: ['Leisure','Transportation','Food','Groceries','Others','Games','Friends'],
+    featureSettings: { clear:true, reset:true },
+    centsMode: true,
+    currency: 'USD',
+    lang: (localStorage.getItem('lang') || 'en'),
+    quickAmounts: [-1,-3,-5,-10,-20],
+    pinEnabled: false,
+    pinHash: '',
+    historyFilters: { mode:'all', category:'all', from:'', to:'' }
+  };
+}
+function readProfileData(id){
+  const raw = localStorage.getItem(profileStoreKey(id));
+  if (!raw) return defaultProfileData();
+  try{
+    return { ...defaultProfileData(), ...JSON.parse(raw) };
+  }catch(e){
+    return defaultProfileData();
+  }
+}
+function writeProfileData(id, data){
+  localStorage.setItem(profileStoreKey(id), JSON.stringify(data));
+}
+
+/* One-time migration */
+function migrateOldDataIntoDefaultProfileIfNeeded(){
+  const existing = loadProfiles();
+  if (existing.length) return;
+
+  const id = uid();
+  saveProfiles([{ id, name:'Main', emoji:'💰' }]);
+  setActiveProfileId(id);
+
+  const oldBudget = parseFloat(localStorage.getItem('budget')) || 0;
+  const oldHistory = JSON.parse(localStorage.getItem('history')) || [];
+  const oldCategories = JSON.parse(localStorage.getItem('categories')) || defaultProfileData().categories;
+  const oldFeatureSettings = JSON.parse(localStorage.getItem('featureSettings')) || defaultProfileData().featureSettings;
+  const oldCentsMode = (localStorage.getItem('centsMode') ?? 'true') === 'true';
+  const oldCurrency = localStorage.getItem('currency') || 'USD';
+  const oldLang = localStorage.getItem('lang') || 'en';
+
+  writeProfileData(id, {
+    ...defaultProfileData(),
+    budget: oldBudget,
+    history: oldHistory,
+    categories: oldCategories,
+    featureSettings: oldFeatureSettings,
+    centsMode: oldCentsMode,
+    currency: oldCurrency,
+    lang: oldLang
+  });
+}
+
+/* =========================
+   LIVE STATE (ACTIVE PROFILE)
+========================= */
+let categories = [];
+let featureSettings = { clear:true, reset:true };
+let lang = 'en';
+let budget = 0;
+let history = [];
+let centsMode = true;
+let quickAmounts = [-1,-3,-5,-10,-20];
+let pinEnabled = false;
+let pinHash = '';
+let historyFilters = { mode:'all', category:'all', from:'', to:'' };
+
+function getCurrency(){
+  return localStorage.getItem('currency') || 'USD';
+}
+function setCurrency(cur){
+  localStorage.setItem('currency', cur);
+}
+
+function persistCurrentProfile(){
+  const id = getActiveProfileId();
+  if (!id) return;
+  writeProfileData(id, {
+    budget,
+    history,
+    categories,
+    featureSettings,
+    centsMode,
+    currency: getCurrency(),
+    lang,
+    quickAmounts,
+    pinEnabled,
+    pinHash,
+    historyFilters
+  });
+}
+function loadActiveProfileIntoApp(){
+  const id = getActiveProfileId();
+  if (!id) return;
+  const data = readProfileData(id);
+
+  budget = Number(data.budget || 0);
+  history = Array.isArray(data.history) ? data.history : [];
+  categories = Array.isArray(data.categories) ? data.categories : defaultProfileData().categories;
+  featureSettings = data.featureSettings || defaultProfileData().featureSettings;
+  centsMode = !!data.centsMode;
+  quickAmounts = Array.isArray(data.quickAmounts) ? data.quickAmounts : [-1,-3,-5,-10,-20];
+  pinEnabled = !!data.pinEnabled;
+  pinHash = String(data.pinHash || '');
+  historyFilters = data.historyFilters || { mode:'all', category:'all', from:'', to:'' };
+
+  setCurrency(data.currency || 'USD');
+  lang = data.lang || (localStorage.getItem('lang') || 'en');
+  localStorage.setItem('lang', lang);
+}
+
+/* =========================
+   MONEY FORMAT
+========================= */
+function formatMoney(value){
+  const currency = getCurrency();
+  try{
+    return new Intl.NumberFormat(undefined, { style:'currency', currency }).format(value);
+  } catch(e){
+    return `$${Number(value||0).toFixed(2)}`;
+  }
+}
+
+/* =========================
+   CLOCK
+========================= */
+function tickClock(){
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    '🕒 ' + n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+setInterval(tickClock,1000); tickClock();
+
+/* =========================
+   THEME
+========================= */
+function toggleMode(){
+  const dark = document.body.classList.contains('dark-mode');
+  document.body.classList.toggle('dark-mode', !dark);
+  document.body.classList.toggle('light-mode', dark);
+  localStorage.setItem('theme', dark ? 'light' : 'dark');
+  document.getElementById('mode-toggle').textContent = dark ? '🌙' : '☀️';
+}
+(function initTheme(){
+  if (localStorage.getItem('theme')==='dark'){
+    document.body.classList.add('dark-mode');
+    document.getElementById('mode-toggle').textContent='☀️';
+  } else {
+    document.body.classList.add('light-mode');
+    document.getElementById('mode-toggle').textContent='🌙';
+  }
+})();
+
+/* =========================
+   INPUT (SMART CENTS + DECIMAL)
+========================= */
+let amountDigits = '';
+let amountRaw = '';
+function moneyFromDigits(d){
+  if (!d) return 0;
+  const cents = parseInt(d,10);
+  if (isNaN(cents)) return 0;
+  return cents/100;
+}
+function moneyFromRaw(s){
+  if (!s) return 0;
+  const v = parseFloat(s);
+  if (isNaN(v)) return 0;
+  return v;
+}
+function getCurrentAmount(){
+  return centsMode ? moneyFromDigits(amountDigits) : moneyFromRaw(amountRaw);
+}
+function renderAmountInput(){
+  const v = getCurrentAmount();
+  inputEl.value = formatMoney(v);
+}
+function clearInput(){
+  amountDigits = '';
+  amountRaw = '';
+  renderAmountInput();
+}
+function syncDecimalButton(){
+  decimalBtn.style.display = centsMode ? 'none' : '';
+}
+function appendNumber(n){
+  if (!/^\d$/.test(n)) return;
+
+  if (centsMode){
+    if (amountDigits.length >= 12) return;
+    if (amountDigits === '0') amountDigits = '';
+    amountDigits += n;
+  } else {
+    if (amountRaw.length >= 14) return;
+    if (amountRaw.includes('.')){
+      const parts = amountRaw.split('.');
+      const dec = parts[1] ?? '';
+      if (dec.length >= 2) return;
+    }
+    amountRaw += n;
+  }
+  renderAmountInput();
+}
+function appendDecimal(){
+  if (centsMode) return;
+  if (!amountRaw) amountRaw = '0';
+  if (amountRaw.includes('.')) return;
+  amountRaw += '.';
+  renderAmountInput();
+}
+function backspace(){
+  if (centsMode) amountDigits = amountDigits.slice(0,-1);
+  else amountRaw = amountRaw.slice(0,-1);
+  renderAmountInput();
+}
+
+/* long-press backspace = clear */
+(function initBackspaceLongPress(){
+  let t=null;
+  const start=()=>{ t=setTimeout(()=>{ clearInput(); haptic('success'); }, 420); };
+  const end=()=>{ if(t){ clearTimeout(t); t=null; } };
+  backspaceBtn.addEventListener('touchstart', start, {passive:true});
+  backspaceBtn.addEventListener('touchend', end, {passive:true});
+  backspaceBtn.addEventListener('mousedown', start);
+  backspaceBtn.addEventListener('mouseup', end);
+  backspaceBtn.addEventListener('mouseleave', end);
+})();
+
+/* hold zero = 00 */
+(function initZeroHold(){
+  let t=null;
+  const start=()=>{ t=setTimeout(()=>{ appendNumber('0'); appendNumber('0'); haptic('success'); }, 420); };
+  const end=()=>{ if(t){ clearTimeout(t); t=null; } };
+  zeroBtn.addEventListener('touchstart', start, {passive:true});
+  zeroBtn.addEventListener('touchend', end, {passive:true});
+  zeroBtn.addEventListener('mousedown', start);
+  zeroBtn.addEventListener('mouseup', end);
+  zeroBtn.addEventListener('mouseleave', end);
+})();
+
+/* =========================
+   QUICK AMOUNTS (PER PROFILE)
+========================= */
+function renderQuickBar(){
+  const bar = document.getElementById('quickBar');
+  if (!bar) return;
+  const addLabel = (lang==='ar') ? '➕ إضافة' : '➕ Add';
+  bar.innerHTML = `
+    <button class="quick-btn" onclick="quickApplyFixed(+1)">${addLabel}</button>
+    ${quickAmounts.map(a=>{
+      const sign = a < 0 ? '−' : '+';
+      return `<button class="quick-btn" onclick="quickApplyFixed(${a})">${sign}${Math.abs(a)}</button>`;
+    }).join('')}
+  `;
+}
+function quickApplyFixed(delta){
+  const v = Math.abs(Number(delta||0));
+  if (!v) return;
+  const ts = new Date().toLocaleString();
+  if (delta < 0){
+    budget -= v;
+    history.push({ id: uid(), kind:'subtract', category:'Others', type:'Subtract (Quick)', value:v, timestamp:ts });
+  } else {
+    budget += v;
+    history.push({ id: uid(), kind:'add', type:'Add (Quick)', value:v, timestamp:ts });
+  }
+  saveBudget();
+  renderHistory();
+  clearInput();
+  haptic('success');
+}
+function renderQuickEditor(){
+  const holder = document.getElementById('quickEditor');
+  if (!holder) return;
+  holder.innerHTML = quickAmounts.map((a,i)=>`
+    <div class="quick-row">
+      <span>${a<0?'−':'+'}${Math.abs(a)}</span>
+      <div class="quick-row-actions">
+        <button class="mini-btn" onclick="editQuickAmount(${i})">✏️</button>
+        <button class="mini-btn danger" onclick="removeQuickAmount(${i})">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+function addQuickAmount(){
+  const inp = document.getElementById('quickNew');
+  const n = Number(inp.value);
+  if (!n || !isFinite(n)) return;
+  const val = -Math.abs(n);
+  if (quickAmounts.includes(val)) { inp.value=''; return; }
+  quickAmounts.push(val);
+  inp.value='';
+  persistCurrentProfile();
+  renderQuickEditor();
+  renderQuickBar();
+  haptic('success');
+}
+function removeQuickAmount(i){
+  quickAmounts.splice(i,1);
+  persistCurrentProfile();
+  renderQuickEditor();
+  renderQuickBar();
+  haptic('success');
+}
+function editQuickAmount(i){
+  const raw = prompt(lang==='ar' ? 'اكتب الرقم (مثال: -5 أو 5)' : 'Enter number (ex: -5 or 5)', String(quickAmounts[i]));
+  if (raw === null) return;
+  const n = Number(raw);
+  if (!n || !isFinite(n)) return;
+  quickAmounts[i] = n;
+  persistCurrentProfile();
+  renderQuickEditor();
+  renderQuickBar();
+  haptic('success');
+}
+
+/* =========================
+   BUDGET / HISTORY CORE
+========================= */
+function saveBudget(){
+  persistCurrentProfile();
+  updateBudget();
+}
+function updateBudget(){
+  document.getElementById('budget').textContent = `Budget: ${formatMoney(budget)}`;
+}
+function submitAmount(type){
+  const v = getCurrentAmount();
+  if (!v) return;
+  const ts = new Date().toLocaleString();
+
+  if (type === 'add'){
+    budget += v;
+    history.push({ id: uid(), kind:'add', type:'Add', value:v, timestamp:ts });
+    saveBudget(); renderHistory(); clearInput();
+  }
+}
+
+/* TEMP MODALS container closer (edit/subtract/filter/chart/pin modals) */
+function closeTempModals(force=false){
+  document.querySelectorAll('.sleek-modal').forEach(el=>el.remove());
+  if (!force) return;
+}
+function closeFilters(force=false){ const el=document.getElementById('filtersModal'); if(el) el.remove(); if(force){} }
+function closeCharts(force=false){ const el=document.getElementById('chartsModal'); if(el) el.remove(); if(force){} }
+function closePinModals(force=false){ document.querySelectorAll('.pin-modal').forEach(el=>el.remove()); if(force){} }
+
+/* =========================
+   SETTINGS (FULL + FIXED CLOSE)
+========================= */
+function openSettings(){
+  renderSettings();
+  settingsModal.style.display='block';
+  showOverlay();
+}
+function closeSettings(force=false){
+  settingsModal.style.display='none';
+  if (!force) persistCurrentProfile();
+  // ✅ immediate unblur
+  if (force || profileMenu.style.display!=='block') hideOverlay();
+}
+function applyFeatureVisibility(){
+  clearBtn.style.display = featureSettings.clear ? '' : 'none';
+  resetBtn.style.display = featureSettings.reset ? '' : 'none';
+}
+function renderSettings(){
+  // toggles
+  const tClear = document.getElementById('toggleClear');
+  const tReset = document.getElementById('toggleReset');
+
+  tClear.checked = !!featureSettings.clear;
+  tReset.checked = !!featureSettings.reset;
+
+  tClear.onchange = ()=>{ featureSettings.clear = tClear.checked; persistCurrentProfile(); applyFeatureVisibility(); };
+  tReset.onchange = ()=>{ featureSettings.reset = tReset.checked; persistCurrentProfile(); applyFeatureVisibility(); };
+
+  // currency
+  const curSel = document.getElementById('currencySelect');
+  curSel.value = getCurrency();
+  curSel.onchange = ()=>{
+    setCurrency(curSel.value);
+    persistCurrentProfile();
+    updateBudget(); renderHistory(); renderAmountInput();
+  };
+
+  // cents mode
+  const centsToggle = document.getElementById('toggleCentsMode');
+  centsToggle.checked = centsMode;
+  centsToggle.onchange = ()=>{
+    centsMode = centsToggle.checked;
+    localStorage.setItem('centsMode', centsMode ? 'true' : 'false');
+    clearInput();
+    syncDecimalButton();
+    persistCurrentProfile();
+  };
+
+  // categories
+  const list = document.getElementById('categoryList');
+  list.innerHTML='';
+  categories.forEach((c,i)=>{
+    const row=document.createElement('div');
+    row.innerHTML = `${escapeHtml(c)}
+      <button style="float:right;background:#ef4444;color:#fff;border:none;border-radius:8px;padding:2px 8px;font-weight:800"
+        onclick="removeCategory(${i})">X</button>`;
+    list.appendChild(row);
+  });
+
+  renderQuickEditor();
+}
+
+/* categories add/remove */
+function addCategory(){
+  const inp=document.getElementById('newCategoryInput');
+  const val=(inp.value||'').trim();
+  if(!val || categories.includes(val)) return;
+  categories.push(val);
+  inp.value='';
+  persistCurrentProfile();
+  renderSettings();
+}
+function removeCategory(i){
+  categories.splice(i,1);
+  persistCurrentProfile();
+  renderSettings();
+}
+
+/* language */
+function toggleLanguage(){
+  lang = (lang==='en') ? 'ar' : 'en';
+  localStorage.setItem('lang', lang);
+  persistCurrentProfile();
+  applyLanguage();
+  renderQuickBar();
+  renderProfileMenu();
+}
+function applyLanguage(){
+  const en={
+    title:'Money Budgeter', settingsTitle:'Settings', languageLabel:'Language:',
+    featuresLabel:'Features:', categoryLabel:'Custom Categories:',
+    toggleClearLbl:'Show Clear History', toggleResetLbl:'Show Reset',
+    langBtn:'Switch to Arabic 🇸🇦', historyLabel:'History', currencyLabel:'Currency:',
+    toggleCentsLbl:'Smart cents input', profilesTitle:'Profiles',
+    quickLabel:'Quick Amounts:', pinLabel:'PIN Lock:'
+  };
+  const ar={
+    title:'مدير الميزانية', settingsTitle:'الإعدادات', languageLabel:'اللغة:',
+    featuresLabel:'الخصائص:', categoryLabel:'الفئات المخصصة:',
+    toggleClearLbl:'عرض مسح السجل', toggleResetLbl:'عرض إعادة الضبط',
+    langBtn:'التبديل إلى الإنجليزية 🇬🇧', historyLabel:'السجل', currencyLabel:'العملة:',
+    toggleCentsLbl:'إدخال ذكي (سنتات)', profilesTitle:'البروفايلات',
+    quickLabel:'المبالغ السريعة:', pinLabel:'قفل PIN:'
+  };
+  const t=(lang==='ar')?ar:en;
+
+  document.getElementById('title').textContent=t.title;
+  document.getElementById('settingsTitle').textContent=t.settingsTitle;
+  document.getElementById('languageLabel').textContent=t.languageLabel;
+  document.getElementById('featuresLabel').textContent=t.featuresLabel;
+  document.getElementById('categoryLabel').textContent=t.categoryLabel;
+  document.getElementById('toggleClearLbl').textContent=t.toggleClearLbl;
+  document.getElementById('toggleResetLbl').textContent=t.toggleResetLbl;
+  document.getElementById('langBtn').textContent=t.langBtn;
+  document.getElementById('historyLabel').textContent=t.historyLabel;
+  document.getElementById('currencyLabel').textContent=t.currencyLabel;
+  document.getElementById('toggleCentsLbl').textContent=t.toggleCentsLbl;
+  document.getElementById('profilesTitle').textContent=t.profilesTitle;
+  document.getElementById('quickLabel').textContent=t.quickLabel;
+  document.getElementById('pinLabel').textContent=t.pinLabel;
+
+  document.body.setAttribute('dir', (lang==='ar')?'rtl':'ltr');
+}
+
+/* =========================
+   PROFILES (FULL: SWITCH + EDIT + DELETE)
+========================= */
+function renderProfileBadge(){
+  const profiles = loadProfiles();
+  const id = getActiveProfileId();
+  const p = profiles.find(x=>x.id===id) || profiles[0];
+  profileBadge.textContent = p?.emoji || '🙂';
+}
+function openProfileMenu(){
+  renderProfileMenu();
+  profileMenu.style.display='block';
+  showOverlay();
+}
+function closeProfileMenu(force=false){
+  profileMenu.style.display='none';
+  // ✅ immediate unblur
+  if (force || settingsModal.style.display!=='block') hideOverlay();
+}
+function toggleProfileMenu(){
+  const open = profileMenu.style.display === 'block';
+  if (open) closeProfileMenu();
+  else openProfileMenu();
+}
+
+function renderProfileMenu(){
+  const profiles = loadProfiles();
+  const active = getActiveProfileId();
+  profileListEl.innerHTML = '';
+
+  profiles.forEach(p=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'profile-row-wrap';
+
+    wrap.innerHTML = `
+      <button class="profile-row ${p.id===active?'active':''}" type="button">
+        <span class="profile-emoji">${escapeHtml(p.emoji||'🙂')}</span>
+        <span class="profile-name">${escapeHtml(p.name||'Profile')}</span>
+        <span class="profile-check">✓</span>
+      </button>
+      <div class="profile-row-actions">
+        <button class="mini-icon" onclick="event.stopPropagation(); editProfile('${p.id}')">✏️</button>
+        <button class="mini-icon danger" onclick="event.stopPropagation(); deleteProfileById('${p.id}')">🗑</button>
+      </div>
+    `;
+
+    wrap.querySelector('.profile-row').onclick = ()=>{
+      if (p.id === active) return; // don't close if same
+      haptic('success');
+      switchProfile(p.id);
+      closeProfileMenu(true);
+    };
+
+    const delBtn = wrap.querySelector('.mini-icon.danger');
+    if (profiles.length <= 1){
+      delBtn.disabled = true;
+      delBtn.style.opacity = '0.35';
+      delBtn.style.cursor = 'not-allowed';
+    }
+
+    profileListEl.appendChild(wrap);
+  });
+}
+
+function switchProfile(id){
+  const profiles = loadProfiles();
+  if (!profiles.some(p=>p.id===id)) return;
+
+  persistCurrentProfile();
+  setActiveProfileId(id);
+  loadActiveProfileIntoApp();
+
+  clearInput();
+  syncDecimalButton();
+  applyLanguage();
+  applyFeatureVisibility();
+  renderProfileBadge();
+  renderQuickBar();
+  renderQuickEditor();
+  updateBudget();
+  renderHistory();
+}
+
+function addProfile(){
+  const name = prompt(lang==='ar' ? 'اسم البروفايل؟' : 'Profile name?');
+  if (!name) return;
+  const emoji = prompt(lang==='ar' ? 'إيموجي؟' : 'Emoji?', '🛍️');
+  if (!emoji) return;
+
+  persistCurrentProfile();
+
+  const profiles = loadProfiles();
+  const id = uid();
+  profiles.push({ id, name: name.trim(), emoji: emoji.trim() });
+  saveProfiles(profiles);
+
+  writeProfileData(id, defaultProfileData());
+  switchProfile(id);
+}
+
+function editProfile(id){
+  const profiles = loadProfiles();
+  const p = profiles.find(x=>x.id===id);
+  if (!p) return;
+
+  const newName = prompt(lang==='ar' ? 'الاسم الجديد:' : 'New name:', p.name || '');
+  if (!newName) return;
+
+  const newEmoji = prompt(lang==='ar' ? 'الإيموجي الجديد:' : 'New emoji:', p.emoji || '🙂');
+  if (!newEmoji) return;
+
+  p.name = newName.trim();
+  p.emoji = newEmoji.trim();
+  saveProfiles(profiles);
+
+  renderProfileBadge();
+  renderProfileMenu();
+}
+
+function deleteProfileById(id){
+  const profiles = loadProfiles();
+  if (profiles.length <= 1){
+    alert(lang==='ar' ? 'لا يمكن حذف آخر بروفايل.' : "You can't delete the last profile.");
+    haptic('error');
+    return;
+  }
+  const p = profiles.find(x=>x.id===id);
+  const ok = confirm(
+    (lang==='ar' ? `حذف "${p?.name||''}"؟` : `Delete "${p?.name||''}"?`) +
+    (lang==='ar' ? '\nسيتم حذف الميزانية والسجل.' : '\nThis removes its budget and history.')
+  );
+  if (!ok) return;
+
+  localStorage.removeItem(profileStoreKey(id));
+
+  const active = getActiveProfileId();
+  const remaining = profiles.filter(x=>x.id!==id);
+  saveProfiles(remaining);
+
+  if (id === active){
+    setActiveProfileId(remaining[0].id);
+    loadActiveProfileIntoApp();
+
+    clearInput();
+    syncDecimalButton();
+    applyLanguage();
+    applyFeatureVisibility();
+    renderProfileBadge();
+    renderQuickBar();
+    renderQuickEditor();
+    updateBudget();
+    renderHistory();
+  }
+
+  renderProfileMenu();
+}
+
+/* =========================
+   HISTORY RENDER (filtered)
+   NOTE: edit-history + filters + charts + pin + subtract
+   are completed in PART 2.2
+========================= */
+function toYMD(ts){
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const da = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${da}`;
+}
+function renderHistory(){
+  historyEl.innerHTML = '';
+
+  const list = history.slice().reverse();
+  const from = historyFilters.from || '';
+  const to = historyFilters.to || '';
+
+  const filtered = list.filter(it=>{
+    const kind = it.kind || (String(it.type||'').toLowerCase().startsWith('add') ? 'add' : 'subtract');
+
+    if (historyFilters.mode === 'add' && kind !== 'add') return false;
+    if (historyFilters.mode === 'subtract' && kind !== 'subtract') return false;
+
+    if (historyFilters.category !== 'all'){
+      if (kind !== 'subtract') return false;
+      const cat = it.category || (String(it.type||'').match(/^Subtract \((.+)\)$/)?.[1] || '');
+      if (cat !== historyFilters.category) return false;
+    }
+
+    if (from || to){
+      const ymd = toYMD(it.timestamp);
+      if (!ymd) return false;
+      if (from && ymd < from) return false;
+      if (to && ymd > to) return false;
+    }
+
+    return true;
+  });
+
+  const isActive =
+    historyFilters.mode !== 'all' ||
+    historyFilters.category !== 'all' ||
+    !!historyFilters.from ||
+    !!historyFilters.to;
+
+  if (isActive){
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip';
+    chip.textContent = (lang==='ar') ? 'الفلاتر مفعلة' : 'Filters active';
+    chip.onclick = openFilters;
+    historyEl.appendChild(chip);
+  }
+
+  filtered.forEach((it, idx)=>{
+    const d=document.createElement('div');
+    d.className='history-item';
+    d.textContent = `${it.timestamp} — ${it.type}: ${formatMoney(it.value)}`;
+    d.onclick = ()=> openEditHistory(idx);
+    historyEl.appendChild(d);
+  });
+
+  if (!filtered.length){
+    const empty = document.createElement('div');
+    empty.className = 'history-empty';
+    empty.textContent = (lang==='ar') ? 'لا توجد نتائج' : 'No results';
+    historyEl.appendChild(empty);
+  }
+}
+
+/* Clear/Reset */
+function clearHistory(){
+  history = [];
+  saveBudget();
+  renderHistory();
+  haptic('success');
+}
+function resetBudget(){
+  budget = 0;
+  saveBudget();
+  haptic('success');
+}
+
+/* Fullscreen history button */
+document.getElementById('toggleHistoryBtn').addEventListener('click', openFullHistory);
+
+/* =========================
+   INIT (PARTIAL)
+   Full init completes in PART 2.2
+========================= */
+function init(){
+  migrateOldDataIntoDefaultProfileIfNeeded();
+
+  const profiles = loadProfiles();
+  if (!getActiveProfileId() && profiles.length){
+    setActiveProfileId(profiles[0].id);
+  }
+  loadActiveProfileIntoApp();
+
+  applyLanguage();
+  renderProfileBadge();
+  renderQuickBar();
+  renderQuickEditor();
+  applyFeatureVisibility();
+  syncDecimalButton();
+  renderAmountInput();
+  updateBudget();
+  renderHistory();
+}
+init();
+/* =========================
+   SUBTRACT (CATEGORY PICK)
+========================= */
+function openSubtract(){
+  const v = getCurrentAmount();
+  if (!v) return;
+
+  const m = document.createElement('div');
+  m.className = 'modal sleek-modal';
+
+  m.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+      <h3>${lang==='ar'?'اختر الفئة':'Select Category'}</h3>
+      <button class="close-btn" onclick="closeTempModals(true); hideOverlay();">✖</button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;width:100%;margin-top:8px;">
+      ${categories.map(c =>
+        `<button class="btn" style="width:90%;margin:6px 0;" onclick="doSubtract('${c.replace(/'/g,"&#39;")}')">${escapeHtml(c)}</button>`
+      ).join('')}
+    </div>
+  `;
+
+  document.body.appendChild(m);
+  showOverlay();
+}
+
+function doSubtract(cat){
+  const v = getCurrentAmount();
+  if (!v) { closeTempModals(true); hideOverlay(); return; }
+
+  const ts = new Date().toLocaleString();
+  budget -= v;
+
+  history.push({
+    id: uid(),
+    kind: 'subtract',
+    category: cat,
+    type: `Subtract (${cat})`,
+    value: v,
+    timestamp: ts
+  });
+
+  saveBudget();
+  renderHistory();
+  clearInput();
+  closeTempModals(true);
+  hideOverlay();
+  haptic('success');
+}
+
+/* =========================
+   EDIT HISTORY (CHANGE AMOUNT/TYPE/CATEGORY)
+========================= */
+function openEditHistory(filteredIndex){
+  // filteredIndex refers to the currently rendered filtered list (history.slice().reverse() filtered)
+  const list = history.slice().reverse();
+
+  // rebuild same filtered list to find correct item
+  const from = historyFilters.from || '';
+  const to = historyFilters.to || '';
+
+  const filtered = list.filter(it=>{
+    const kind = it.kind || (String(it.type||'').toLowerCase().startsWith('add') ? 'add' : 'subtract');
+
+    if (historyFilters.mode === 'add' && kind !== 'add') return false;
+    if (historyFilters.mode === 'subtract' && kind !== 'subtract') return false;
+
+    if (historyFilters.category !== 'all'){
+      if (kind !== 'subtract') return false;
+      const cat = it.category || (String(it.type||'').match(/^Subtract \((.+)\)$/)?.[1] || '');
+      if (cat !== historyFilters.category) return false;
+    }
+
+    if (from || to){
+      const ymd = toYMD(it.timestamp);
+      if (!ymd) return false;
+      if (from && ymd < from) return false;
+      if (to && ymd > to) return false;
+    }
+
+    return true;
+  });
+
+  const item = filtered[filteredIndex];
+  if (!item) return;
+
+  const reverseIndex = list.findIndex(x => x.id && item.id && x.id === item.id);
+  const realIndex = history.length - 1 - reverseIndex;
+  if (realIndex < 0 || !history[realIndex]) return;
+
+  const m = document.createElement('div');
+  m.className = 'modal sleek-modal';
+
+  const isSubtract = (item.kind === 'subtract');
+
+  m.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>${lang==='ar'?'تعديل العملية':'Edit Entry'}</h3>
+      <button class="close-btn" onclick="closeTempModals(true); hideOverlay();">✖</button>
+    </div>
+
+    <label style="margin-top:10px;font-weight:900;display:block;">
+      ${lang==='ar'?'المبلغ':'Amount'}
+      <input id="editAmount" type="number" inputmode="decimal" value="${Number(item.value||0)}"
+        style="width:100%;margin-top:6px;padding:12px;border-radius:12px;border:1px solid rgba(200,210,230,.8);" />
+    </label>
+
+    <label style="margin-top:10px;font-weight:900;display:block;">
+      ${lang==='ar'?'النوع':'Type'}
+      <select id="editKind" class="mb-select" style="margin-top:6px;">
+        <option value="add" ${item.kind==='add'?'selected':''}>${lang==='ar'?'إضافة':'Add'}</option>
+        <option value="subtract" ${item.kind==='subtract'?'selected':''}>${lang==='ar'?'خصم':'Subtract'}</option>
+      </select>
+    </label>
+
+    <div id="editCategoryWrap" style="margin-top:10px;${isSubtract?'':'display:none'}">
+      <label style="font-weight:900;display:block;">
+        ${lang==='ar'?'الفئة':'Category'}
+        <select id="editCategory" class="mb-select" style="margin-top:6px;">
+          ${categories.map(c=>`
+            <option value="${escapeHtml(c)}" ${c===item.category?'selected':''}>
+              ${escapeHtml(c)}
+            </option>
+          `).join('')}
+        </select>
+      </label>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn" style="flex:1;" onclick="saveEditedHistory(${realIndex})">${lang==='ar'?'حفظ':'Save'}</button>
+      <button class="btn danger" style="flex:1;" onclick="deleteHistoryEntry(${realIndex})">${lang==='ar'?'حذف':'Delete'}</button>
+    </div>
+  `;
+
+  document.body.appendChild(m);
+  showOverlay();
+
+  m.querySelector('#editKind').onchange = (e)=>{
+    const wrap = m.querySelector('#editCategoryWrap');
+    wrap.style.display = e.target.value === 'subtract' ? '' : 'none';
+  };
+}
+
+function saveEditedHistory(realIndex){
+  const oldItem = history[realIndex];
+  if (!oldItem) return;
+
+  const amount = Number(document.getElementById('editAmount').value);
+  const kind = document.getElementById('editKind').value;
+  const catSel = document.getElementById('editCategory');
+
+  if (!amount || amount <= 0) return;
+
+  // reverse old
+  if (oldItem.kind === 'add') budget -= Number(oldItem.value||0);
+  else budget += Number(oldItem.value||0);
+
+  // apply new
+  const ts = oldItem.timestamp;
+  const newItem = { id: oldItem.id || uid(), timestamp: ts, kind, value: amount };
+
+  if (kind === 'add'){
+    budget += amount;
+    newItem.type = 'Add';
+    delete newItem.category;
+  } else {
+    const cat = catSel ? catSel.value : (categories[0]||'Others');
+    budget -= amount;
+    newItem.category = cat;
+    newItem.type = `Subtract (${cat})`;
+  }
+
+  history[realIndex] = newItem;
+
+  saveBudget();
+  renderHistory();
+  closeTempModals(true);
+  hideOverlay();
+  haptic('success');
+}
+
+function deleteHistoryEntry(realIndex){
+  const it = history[realIndex];
+  if (!it) return;
+
+  const ok = confirm(lang==='ar' ? 'حذف العملية؟' : 'Delete this entry?');
+  if (!ok) return;
+
+  if (it.kind === 'add') budget -= Number(it.value||0);
+  else budget += Number(it.value||0);
+
+  history.splice(realIndex, 1);
+
+  saveBudget();
+  renderHistory();
+  closeTempModals(true);
+  hideOverlay();
+  haptic('success');
+}
+
+/* =========================
+   FILTERS MODAL
+========================= */
+function openFilters(){
+  closeTempModals(true);
+  closeCharts(true);
+  closePinModals(true);
+
+  const m = document.createElement('div');
+  m.className = 'modal sleek-modal';
+  m.id = 'filtersModal';
+
+  const title = (lang==='ar') ? 'فلترة السجل' : 'Filter History';
+
+  m.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+      <h3>${title}</h3>
+      <button class="close-btn" onclick="closeFilters(true); hideOverlay();">✖</button>
+    </div>
+
+    <div style="margin-top:12px;width:100%;">
+      <label style="font-weight:900;display:block;margin-bottom:6px;">${lang==='ar'?'النوع':'Type'}</label>
+      <select id="filterMode" class="mb-select">
+        <option value="all">${lang==='ar'?'الكل':'All'}</option>
+        <option value="add">${lang==='ar'?'إضافة فقط':'Add only'}</option>
+        <option value="subtract">${lang==='ar'?'خصم فقط':'Subtract only'}</option>
+      </select>
+
+      <label style="font-weight:900;display:block;margin:10px 0 6px;">${lang==='ar'?'الفئة':'Category'}</label>
+      <select id="filterCategory" class="mb-select">
+        <option value="all">${lang==='ar'?'كل الفئات':'All categories'}</option>
+        ${categories.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+      </select>
+
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <div style="flex:1;">
+          <label style="font-weight:900;display:block;margin-bottom:6px;">${lang==='ar'?'من تاريخ':'From'}</label>
+          <input id="filterFrom" type="date" class="mb-select" style="margin:0;" />
+        </div>
+        <div style="flex:1;">
+          <label style="font-weight:900;display:block;margin-bottom:6px;">${lang==='ar'?'إلى تاريخ':'To'}</label>
+          <input id="filterTo" type="date" class="mb-select" style="margin:0;" />
+        </div>
+      </div>
+
+      <button class="btn" style="margin-top:14px;" onclick="applyFilters()">${lang==='ar'?'تطبيق':'Apply'}</button>
+      <button class="btn danger" style="margin-top:10px;" onclick="clearFilters()">${lang==='ar'?'مسح الفلاتر':'Clear Filters'}</button>
+    </div>
+  `;
+
+  document.body.appendChild(m);
+  showOverlay();
+
+  document.getElementById('filterMode').value = historyFilters.mode;
+  document.getElementById('filterCategory').value = historyFilters.category;
+  document.getElementById('filterFrom').value = historyFilters.from || '';
+  document.getElementById('filterTo').value = historyFilters.to || '';
+}
+
+function applyFilters(){
+  historyFilters.mode = document.getElementById('filterMode').value;
+  historyFilters.category = document.getElementById('filterCategory').value;
+  historyFilters.from = document.getElementById('filterFrom').value || '';
+  historyFilters.to = document.getElementById('filterTo').value || '';
+
+  persistCurrentProfile();
+  renderHistory();
+  closeFilters(true);
+  hideOverlay();
+  haptic('success');
+}
+
+function clearFilters(){
+  historyFilters = { mode:'all', category:'all', from:'', to:'' };
+  persistCurrentProfile();
+  renderHistory();
+  closeFilters(true);
+  hideOverlay();
+  haptic('success');
+}
+
+function closeFilters(force=false){
+  const el = document.getElementById('filtersModal');
+  if (el) el.remove();
+  if (!force) hideOverlay();
+}
+
+/* =========================
+   CHARTS MODAL (CANVAS)
+========================= */
+function openCharts(){
+  closeTempModals(true);
+  closeFilters(true);
+  closePinModals(true);
+
+  const m = document.createElement('div');
+  m.className = 'modal sleek-modal';
+  m.id = 'chartsModal';
+
+  m.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+      <h3>${lang==='ar'?'الرسوم البيانية':'Charts'}</h3>
+      <button class="close-btn" onclick="closeCharts(true); hideOverlay();">✖</button>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <button class="btn" style="flex:1" onclick="drawCategoryChart()">${lang==='ar'?'حسب الفئة':'By Category'}</button>
+      <button class="btn" style="flex:1" onclick="drawTimeChart()">${lang==='ar'?'حسب الوقت':'Over Time'}</button>
+    </div>
+
+    <div style="margin-top:12px;">
+      <canvas id="chartCanvas" width="720" height="420"
+        style="width:100%;height:auto;border-radius:14px;"></canvas>
+    </div>
+
+    <div id="chartHint" style="margin-top:10px;text-align:center;font-weight:900;opacity:.9;">
+      ${lang==='ar'?'اختر نوع الرسم بالأعلى':'Pick a chart above'}
+    </div>
+  `;
+
+  document.body.appendChild(m);
+  showOverlay();
+  setTimeout(drawCategoryChart, 0);
+}
+
+function closeCharts(force=false){
+  const el = document.getElementById('chartsModal');
+  if (el) el.remove();
+  if (!force) hideOverlay();
+}
+
+function getEntryKind(it){
+  if (it.kind) return it.kind;
+  const t = String(it.type||'').toLowerCase();
+  return t.startsWith('add') ? 'add' : 'subtract';
+}
+function getEntryCategory(it){
+  if (it.category) return it.category;
+  const m = String(it.type||'').match(/^Subtract \((.+)\)$/);
+  return m ? m[1] : 'Others';
+}
+
+function drawBars(ctx, labels, values, opts={}){
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const padL = 70, padR = 18, padT = 28, padB = 68;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  ctx.globalAlpha = 0.14;
+  for (let i=0;i<=5;i++){
+    const y = padT + (chartH * i/5);
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(W-padR, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  const maxV = Math.max(1, ...values);
+  const gap = Math.max(8, Math.floor(chartW * 0.02));
+  const barW = Math.max(18, Math.floor((chartW - gap*(values.length-1)) / Math.max(1, values.length)));
+
+  ctx.font = '16px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText(opts.title || 'Chart', padL, 18);
+
+  ctx.font = '12px system-ui';
+  ctx.textAlign = 'right';
+  for (let i=0;i<=5;i++){
+    const v = maxV * (1 - i/5);
+    const y = padT + (chartH * i/5);
+    ctx.globalAlpha = 0.75;
+    ctx.fillText(formatMoney(v), padL - 8, y + 4);
+  }
+  ctx.globalAlpha = 1;
+
+  for (let i=0;i<values.length;i++){
+    const v = values[i];
+    const h = (v/maxV) * chartH;
+    const x = padL + i*(barW+gap);
+    const y = padT + (chartH - h);
+
+    ctx.globalAlpha = 0.95;
+    ctx.fillRect(x, y, barW, h);
+
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.font = '12px system-ui';
+    ctx.fillText(formatMoney(v), x + barW/2, y - 6);
+
+    const label = String(labels[i] || '');
+    const short = label.length > 10 ? label.slice(0,10)+'…' : label;
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(short, x + barW/2, H - 26);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawCategoryChart(){
+  const canvas = document.getElementById('chartCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const totals = {};
+  categories.forEach(c=> totals[c]=0);
+
+  history.forEach(it=>{
+    if (getEntryKind(it) !== 'subtract') return;
+    const cat = getEntryCategory(it);
+    if (totals[cat] === undefined) totals[cat] = 0;
+    totals[cat] += Number(it.value || 0);
+  });
+
+  const entries = Object.entries(totals)
+    .filter(([,v])=>v>0)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0, 8);
+
+  const labels = entries.map(e=>e[0]);
+  const values = entries.map(e=>e[1]);
+
+  drawBars(ctx, labels.length?labels:[(lang==='ar'?'لا بيانات':'No data')],
+           values.length?values:[0],
+           { title: (lang==='ar'?'الخصم حسب الفئة':'Subtract by Category') });
+
+  const hint = document.getElementById('chartHint');
+  if (hint){
+    hint.textContent = labels.length
+      ? (lang==='ar'?'عرض أعلى الفئات':'Showing top categories')
+      : (lang==='ar'?'لا يوجد خصم بعد':'No subtract entries yet');
+  }
+}
+
+function drawTimeChart(){
+  const canvas = document.getElementById('chartCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const dayTotals = {};
+  history.forEach(it=>{
+    if (getEntryKind(it) !== 'subtract') return;
+    const ymd = toYMD(it.timestamp);
+    if (!ymd) return;
+    dayTotals[ymd] = (dayTotals[ymd] || 0) + Number(it.value || 0);
+  });
+
+  const days = Object.keys(dayTotals).sort();
+  const last = days.slice(-14);
+  const labels = last.map(d=>d.slice(5));
+  const values = last.map(d=>dayTotals[d]);
+
+  drawBars(ctx, labels.length?labels:[(lang==='ar'?'لا بيانات':'No data')],
+           values.length?values:[0],
+           { title: (lang==='ar'?'الخصم عبر الأيام':'Subtract over days') });
+
+  const hint = document.getElementById('chartHint');
+  if (hint){
+    hint.textContent = labels.length
+      ? (lang==='ar'?'آخر 14 يوم':'Last 14 days')
+      : (lang==='ar'?'لا يوجد خصم بعد':'No subtract entries yet');
+  }
+}
+
+/* =========================
+   FULLSCREEN HISTORY MODAL
+========================= */
+function openFullHistory(){
+  const holder = document.createElement('div');
+  holder.className = 'sleek-modal';
+
+  const panel = document.createElement('div');
+  panel.innerHTML =
+    `<h3 style="text-align:center;margin-bottom:10px;">${lang==='ar'?'السجل الكامل':'Full History'}</h3>` +
+    history.slice().reverse().map(it =>
+      `<div style="padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.08);">
+        ${escapeHtml(it.timestamp)} — ${escapeHtml(it.type)}: ${formatMoney(it.value)}
+      </div>`
+    ).join('') +
+    `<button class="btn" style="margin-top:10px;width:100%;" onclick="closeTempModals(true); hideOverlay();">${lang==='ar'?'إغلاق':'Close'}</button>`;
+
+  holder.appendChild(panel);
+  document.body.appendChild(holder);
+  showOverlay();
+}
+
+/* =========================
+   PIN LOCK (4-digit, no Face ID)
+========================= */
+async function sha256Hex(text){
+  const enc = new TextEncoder().encode(text);
+  const hashBuf = await crypto.subtle.digest('SHA-256', enc);
+  const hashArr = Array.from(new Uint8Array(hashBuf));
+  return hashArr.map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function openPinSettings(){
+  closeTempModals(true);
+  closeFilters(true);
+  closeCharts(true);
+
+  const m = document.createElement('div');
+  m.className = 'modal sleek-modal pin-modal';
+
+  const status = pinEnabled ? (lang==='ar'?'مفعّل':'Enabled') : (lang==='ar'?'غير مفعّل':'Disabled');
+
+  m.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+      <h3>${lang==='ar'?'إعدادات PIN':'PIN Settings'}</h3>
+      <button class="close-btn" onclick="closePinModals(true); hideOverlay();">✖</button>
+    </div>
+
+    <div style="margin-top:10px;font-weight:900;">
+      ${lang==='ar'?'الحالة':'Status'}: <span style="opacity:.9">${status}</span>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn" style="flex:1" onclick="${pinEnabled ? 'openChangePinFlow()' : 'openSetPinFlow()'}">
+        ${pinEnabled ? (lang==='ar'?'تغيير PIN':'Change PIN') : (lang==='ar'?'تعيين PIN':'Set PIN')}
+      </button>
+
+      ${pinEnabled ? `
+        <button class="btn danger" style="flex:1" onclick="disablePinFlow()">
+          ${lang==='ar'?'إيقاف PIN':'Disable PIN'}
+        </button>
+      ` : ''}
+    </div>
+  `;
+
+  document.body.appendChild(m);
+  showOverlay();
+}
+
+function buildPinEntryModal(opts){
+  const m = document.createElement('div');
+  m.className = 'modal sleek-modal pin-modal';
+
+  m.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+      <h3>${opts.title || 'PIN'}</h3>
+      ${opts.allowClose ? `<button class="close-btn" onclick="closePinModals(true); hideOverlay();">✖</button>` : `<div style="width:34px;height:34px;"></div>`}
+    </div>
+
+    ${opts.subtitle ? `<div style="text-align:center;margin-top:6px;font-weight:900;opacity:.92">${opts.subtitle}</div>` : ''}
+
+    <div class="pin-dots" id="pinDots" style="margin-top:14px;">
+      <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+    </div>
+
+    <div id="pinError" class="pin-error" style="display:none;margin-top:10px;text-align:center;font-weight:900;">
+      ${lang==='ar'?'PIN غير صحيح':'Wrong PIN'}
+    </div>
+
+    <div class="pin-pad" style="margin-top:14px;">
+      ${['1','2','3','4','5','6','7','8','9','0'].map(n=>`<button class="pin-key" data-pin="${n}">${n}</button>`).join('')}
+      <button class="pin-key pin-back" data-pin="back">⌫</button>
+      <button class="pin-key pin-clear" data-pin="clear">${lang==='ar'?'مسح':'Clear'}</button>
+    </div>
+  `;
+
+  let pin = '';
+
+  function updateDots(){
+    const dots = m.querySelectorAll('.pin-dot');
+    dots.forEach((d,i)=> d.classList.toggle('filled', i < pin.length));
+  }
+  function showErr(){
+    const e = m.querySelector('#pinError');
+    e.style.display = 'block';
+    m.classList.add('pin-shake');
+    haptic('error');
+    setTimeout(()=> m.classList.remove('pin-shake'), 220);
+  }
+  function hideErr(){
+    const e = m.querySelector('#pinError');
+    e.style.display = 'none';
+  }
+
+  m.addEventListener('click', async (ev)=>{
+    const key = ev.target.closest('.pin-key');
+    if (!key) return;
+
+    const val = key.getAttribute('data-pin');
+    hideErr();
+
+    if (val === 'back'){
+      pin = pin.slice(0,-1);
+      updateDots();
+      return;
+    }
+    if (val === 'clear'){
+      pin = '';
+      updateDots();
+      return;
+    }
+    if (!/^\d$/.test(val)) return;
+
+    if (pin.length >= 4) return;
+    pin += val;
+    updateDots();
+
+    if (pin.length === 4){
+      await opts.onDone(pin, {
+        showErr,
+        reset: ()=>{ pin=''; updateDots(); }
+      });
+    }
+  });
+
+  return m;
+}
+
+function openSetPinFlow(){
+  closePinModals(true);
+
+  const step1 = buildPinEntryModal({
+    title: (lang==='ar') ? 'تعيين PIN' : 'Set PIN',
+    subtitle: (lang==='ar') ? 'أدخل PIN من 4 أرقام' : 'Enter a 4-digit PIN',
+    allowClose: true,
+    onDone: async (pin1)=>{
+      closePinModals(true);
+      openConfirmPinFlow(pin1);
+      haptic('success');
+    }
+  });
+
+  document.body.appendChild(step1);
+  showOverlay();
+}
+
+function openConfirmPinFlow(pin1){
+  const step2 = buildPinEntryModal({
+    title: (lang==='ar') ? 'تأكيد PIN' : 'Confirm PIN',
+    subtitle: (lang==='ar') ? 'أعد إدخال نفس PIN' : 'Re-enter the same PIN',
+    allowClose: true,
+    onDone: async (pin2, helpers)=>{
+      if (pin2 !== pin1){
+        helpers.showErr();
+        helpers.reset();
+        return;
+      }
+      pinEnabled = true;
+      pinHash = await sha256Hex(pin2);
+      persistCurrentProfile();
+      closePinModals(true);
+      hideOverlay();
+      haptic('success');
+      alert(lang==='ar' ? 'تم تفعيل PIN ✅' : 'PIN enabled ✅');
+    }
+  });
+
+  document.body.appendChild(step2);
+  showOverlay();
+}
+
+function openChangePinFlow(){
+  closePinModals(true);
+
+  const verify = buildPinEntryModal({
+    title: (lang==='ar') ? 'تغيير PIN' : 'Change PIN',
+    subtitle: (lang==='ar') ? 'أدخل PIN الحالي' : 'Enter current PIN',
+    allowClose: true,
+    onDone: async (pin, helpers)=>{
+      const h = await sha256Hex(pin);
+      if (h !== pinHash){
+        helpers.showErr();
+        helpers.reset();
+        return;
+      }
+      closePinModals(true);
+      openSetPinFlow();
+      haptic('success');
+    }
+  });
+
+  document.body.appendChild(verify);
+  showOverlay();
+}
+
+function disablePinFlow(){
+  closePinModals(true);
+
+  const verify = buildPinEntryModal({
+    title: (lang==='ar') ? 'إيقاف PIN' : 'Disable PIN',
+    subtitle: (lang==='ar') ? 'أدخل PIN للتأكيد' : 'Enter PIN to confirm',
+    allowClose: true,
+    onDone: async (pin, helpers)=>{
+      const h = await sha256Hex(pin);
+      if (h !== pinHash){
+        helpers.showErr();
+        helpers.reset();
+        return;
+      }
+      pinEnabled = false;
+      pinHash = '';
+      persistCurrentProfile();
+      closePinModals(true);
+      hideOverlay();
+      haptic('success');
+      alert(lang==='ar' ? 'تم إيقاف PIN ✅' : 'PIN disabled ✅');
+    }
+  });
+
+  document.body.appendChild(verify);
+  showOverlay();
+}
+
+function openPinUnlockIfNeeded(){
+  if (!pinEnabled || !pinHash) return;
+
+  const unlock = buildPinEntryModal({
+    title: (lang==='ar') ? 'أدخل PIN' : 'Enter PIN',
+    subtitle: (lang==='ar') ? 'لفتح التطبيق' : 'to unlock',
+    allowClose: false,
+    onDone: async (pin, helpers)=>{
+      const h = await sha256Hex(pin);
+      if (h !== pinHash){
+        helpers.showErr();
+        helpers.reset();
+        return;
+      }
+      closePinModals(true);
+      hideOverlay();
+      haptic('success');
+    }
+  });
+
+  document.body.appendChild(unlock);
+  showOverlay();
+}
+
+/* =========================
+   FINAL INIT PATCHES + CLOSE
+========================= */
+function normalizeHistoryEntries(){
+  history = history.map(it=>{
+    const out = { ...it };
+    if (!out.id) out.id = uid();
+    if (!out.kind){
+      const t = String(out.type||'').toLowerCase();
+      out.kind = t.startsWith('add') ? 'add' : 'subtract';
+    }
+    if (out.kind === 'subtract' && !out.category){
+      out.category = getEntryCategory(out);
+    }
+    if (!out.type){
+      out.type = out.kind === 'add' ? 'Add' : (out.category ? `Subtract (${out.category})` : 'Subtract');
+    }
+    return out;
+  });
+  persistCurrentProfile();
+}
+
+/* override init to finish everything */
+const _initOriginal = init;
+init = function(){
+  _initOriginal();
+  normalizeHistoryEntries();
+  openPinUnlockIfNeeded();
+  document.getElementById('mode-toggle').textContent =
+    document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+};
+init();
+
+/* iOS zoom block (kept) */
+(function(){
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+  let lastTouch = 0;
+  document.addEventListener('touchend', function (e) {
+    const now = Date.now();
+    if (now - lastTouch <= 300) { e.preventDefault(); }
+    lastTouch = now;
+  }, { passive: false });
+  document.addEventListener('wheel', function (e) {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive: false });
+})();
+
+/* ESC close support */
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape'){
+    overlayCloseAll();
+    hideOverlay();
+  }
+});
+hideOverlay();
+  </script>
+
   <script src="/pwa-bridge.js"></script>
 </body>
 </html>
