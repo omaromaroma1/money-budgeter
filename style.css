@@ -303,26 +303,19 @@ body.dark-mode .filter-chip{
 }
 #mode-toggle:hover{transform:rotate(18deg) scale(1.05)}
 
-/* ✅ OVERLAY FIX (click + z-index correct) */
 #overlay{
   position:fixed;
   inset:0;
   display:none;
-  z-index:5000;
+  z-index:9998;
   background:rgba(0,0,0,.36);
   backdrop-filter:blur(14px) saturate(130%);
   -webkit-backdrop-filter:blur(14px) saturate(130%);
-  pointer-events: none;
-}
-#overlay.active{
-  display:block;
-  pointer-events: auto;
 }
 
-/* ✅ MODALS ABOVE OVERLAY */
-.modal{ z-index:6000; }
-.profile-menu{ z-index:6100; }
-.sleek-modal, .sleek-modal:not(.modal){ z-index:6200; }
+#overlay.active{
+  display:block;
+}
 
 .modal{
   position:fixed;
@@ -340,6 +333,7 @@ body.dark-mode .filter-chip{
   -webkit-backdrop-filter:blur(30px) saturate(175%);
   box-shadow:0 22px 60px rgba(0,0,0,.35);
   display:none;
+  z-index:9999;
 }
 body.dark-mode .modal{
   background:var(--glass-dark);
@@ -359,7 +353,10 @@ body.dark-mode .modal{
   margin:10px 0 12px;
 }
 body.dark-mode .modal hr{background:rgba(255,255,255,.12)}
-.modal.sleek-modal{ display:block; }
+
+.modal.sleek-modal{
+  display:block;
+}
 
 .sleek-modal:not(.modal){
   position:fixed;
@@ -367,6 +364,7 @@ body.dark-mode .modal hr{background:rgba(255,255,255,.12)}
   display:flex;
   justify-content:center;
   align-items:center;
+  z-index:10000;
   background:transparent;
 }
 .sleek-modal:not(.modal)>div{
@@ -445,6 +443,7 @@ body.dark-mode .sleek-modal:not(.modal)>div{
   -webkit-backdrop-filter:blur(26px) saturate(160%);
   box-shadow:0 18px 52px rgba(0,0,0,.28);
   display:none;
+  z-index:9999;
 }
 body.dark-mode .profile-menu{
   background:var(--glass-dark);
@@ -485,7 +484,9 @@ body.dark-mode .profile-menu{
   box-shadow:0 14px 28px rgba(10,20,40,.45);
 }
 .profile-row:active{transform:translateY(0)}
-.profile-row.active{ outline:2px solid var(--brand); }
+.profile-row.active{
+  outline:2px solid var(--brand);
+}
 .profile-check{
   margin-left:auto;
   opacity:0;
@@ -493,7 +494,10 @@ body.dark-mode .profile-menu{
 }
 .profile-row.active .profile-check{opacity:1}
 
-.profile-row-actions{ display:flex; gap:6px; }
+.profile-row-actions{
+  display:flex;
+  gap:6px;
+}
 .mini-icon,.mini-btn{
   border:none;
   border-radius:14px;
@@ -609,7 +613,7 @@ body.dark-mode .mb-select{
   padding:14px;
   border-radius:18px;
   background:rgba(90,160,255,.10);
-  border:1px solid rgba(255,255,256,.26);
+  border:1px solid rgba(255,255,255,.26);
   backdrop-filter:blur(18px) saturate(150%);
   -webkit-backdrop-filter:blur(18px) saturate(150%);
 }
@@ -635,11 +639,42 @@ body.light-mode .quick-row{
   border-color:rgba(10,107,255,.16);
 }
 
-.quick-row-actions{ display:flex; gap:8px; }
+.quick-row .quick-amt{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:950;
+  font-size:18px;
+  letter-spacing:.2px;
+}
+.quick-row .quick-amt span{
+  opacity:.95;
+}
 
-.pin-dots{ display:flex; justify-content:center; gap:10px; }
+.quick-row-actions{
+  display:flex;
+  gap:8px;
+}
+
+.quick-row-actions .mini-btn{
+  min-width:44px;
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 12px;
+  border-radius:14px;
+}
+
+.pin-dots{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+}
 .pin-dot{
-  width:14px;height:14px;border-radius:50%;
+  width:14px;
+  height:14px;
+  border-radius:50%;
   background:rgba(160,180,220,.45);
 }
 .pin-dot.filled{
@@ -677,4 +712,3 @@ input,select,textarea{font-size:16px}
 body[dir="rtl"]{direction:rtl;text-align:right}
 body[dir="rtl"] .calculator-box h1{text-align:center}
 body{padding-top:env(safe-area-inset-top)}
-
